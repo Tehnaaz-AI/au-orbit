@@ -1,16 +1,14 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Incident, TimetableItem, Room, User } from '../types';
 import { api } from '../api';
 import { 
   CheckCircle, 
   RotateCcw, 
-  Send,
-  Inbox,
-  AlertTriangle,
-  GraduationCap,
-  Calendar,
-  MapPin,
-  Clock,
+  Send, 
+  Inbox, 
+  AlertTriangle, 
+  GraduationCap, 
   ArrowRight
 } from 'lucide-react';
 
@@ -24,6 +22,23 @@ interface FacultyPortalProps {
   onError: (msg: string) => void;
   onSuccess: (msg: string) => void;
 }
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.08, delayChildren: 0.04 }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.35, ease: "easeOut" as const }
+  }
+};
 
 export const FacultyPortal: React.FC<FacultyPortalProps> = ({
   currentUser,
@@ -92,10 +107,18 @@ export const FacultyPortal: React.FC<FacultyPortalProps> = ({
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+    <motion.div 
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}
+    >
       
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+      <motion.div 
+        variants={itemVariants}
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}
+      >
         <div>
           <h1 style={{ fontSize: '1.5rem', marginBottom: '0.2rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
             <GraduationCap color="var(--color-primary)" size={22} />
@@ -106,17 +129,19 @@ export const FacultyPortal: React.FC<FacultyPortalProps> = ({
           </p>
         </div>
 
-        <button 
+        <motion.button 
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.97 }}
           type="button" 
           className="btn btn-secondary btn-sm" 
           onClick={onRefresh}
         >
           <RotateCcw size={13} /> Refresh
-        </button>
-      </div>
+        </motion.button>
+      </motion.div>
 
       {/* Classroom Emergency Escalation */}
-      <div className="card">
+      <motion.div variants={itemVariants} className="card card-interactive">
         <div className="card-header">
           <span className="card-title">
             Report Classroom Issue
@@ -132,8 +157,10 @@ export const FacultyPortal: React.FC<FacultyPortalProps> = ({
             </span>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '0.45rem' }}>
               {facultyTimetable.map(item => (
-                <div 
+                <motion.div 
                   key={item.id}
+                  whileHover={{ scale: 1.02, y: -2 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => setSelectedRoom(item.room_code)}
                   style={{
                     padding: '0.5rem 0.65rem',
@@ -150,22 +177,26 @@ export const FacultyPortal: React.FC<FacultyPortalProps> = ({
                     <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Period {item.period}</span>
                   </div>
                   <div style={{ fontSize: '0.74rem', color: 'var(--text-body)' }}>{item.subject} ({item.section})</div>
-                </div>
+                </motion.div>
               ))}
             </div>
           </div>
         )}
 
         {submittedIncident ? (
-          <div style={{ 
-            padding: '1.25rem', 
-            background: 'var(--status-success-bg)', 
-            borderRadius: 'var(--radius-sm)', 
-            border: '1px solid var(--status-success-border)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.75rem'
-          }}>
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            style={{ 
+              padding: '1.25rem', 
+              background: 'var(--status-success-bg)', 
+              borderRadius: 'var(--radius-sm)', 
+              border: '1px solid var(--status-success-border)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.75rem'
+            }}
+          >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--status-success-text)', fontWeight: 700, fontSize: '0.9rem' }}>
               <CheckCircle size={18} />
               <span>Priority Incident #{submittedIncident.id} reported</span>
@@ -175,7 +206,9 @@ export const FacultyPortal: React.FC<FacultyPortalProps> = ({
             </p>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               {onSelectIncident && (
-                <button 
+                <motion.button 
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
                   type="button" 
                   className="btn btn-primary btn-sm"
                   onClick={() => {
@@ -184,17 +217,19 @@ export const FacultyPortal: React.FC<FacultyPortalProps> = ({
                   }}
                 >
                   View Live Progress <ArrowRight size={13} />
-                </button>
+                </motion.button>
               )}
-              <button 
+              <motion.button 
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
                 type="button" 
                 className="btn btn-secondary btn-sm"
                 onClick={() => setSubmittedIncident(null)}
               >
                 Report Another
-              </button>
+              </motion.button>
             </div>
-          </div>
+          </motion.div>
         ) : (
           <form onSubmit={handleReportUrgent} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '0.75rem' }}>
@@ -225,20 +260,22 @@ export const FacultyPortal: React.FC<FacultyPortalProps> = ({
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <button 
+              <motion.button 
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 type="submit" 
                 className="btn btn-primary" 
                 disabled={submitting || !description.trim()}
               >
                 {submitting ? 'Escalating...' : 'Report Classroom Issue'} <Send size={14} />
-              </button>
+              </motion.button>
             </div>
           </form>
         )}
-      </div>
+      </motion.div>
 
       {/* Classroom Resolution Sign-Off */}
-      <div className="card">
+      <motion.div variants={itemVariants} className="card card-interactive">
         <div className="card-header">
           <span className="card-title">
             <CheckCircle size={16} color="var(--status-success-text)" />
@@ -259,53 +296,63 @@ export const FacultyPortal: React.FC<FacultyPortalProps> = ({
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {pendingVerification.map(inc => (
-              <div 
-                key={inc.id}
-                style={{ 
-                  background: 'var(--status-success-bg)', 
-                  border: '1px solid var(--status-success-border)', 
-                  borderRadius: 'var(--radius-sm)', 
-                  padding: '1rem' 
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
-                  <div>
-                    <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--status-success-text)' }}>
-                      Incident #{inc.id} · Space: {inc.room_code || 'Classroom'}
-                    </span>
-                    <p style={{ fontSize: '0.84rem', color: 'var(--text-body)', margin: '0.2rem 0 0' }}>
-                      {inc.description}
-                    </p>
-                  </div>
-
-                  {inc.work_order && (
-                    <div style={{ display: 'flex', gap: '0.45rem' }}>
-                      <button 
-                        type="button"
-                        className="btn btn-success btn-sm"
-                        disabled={verifyingId === inc.work_order.id}
-                        onClick={() => handleVerification(inc.work_order!.id, 'pass')}
-                      >
-                        <CheckCircle size={13} /> Verify Fixed
-                      </button>
-                      <button 
-                        type="button"
-                        className="btn btn-danger btn-sm"
-                        disabled={verifyingId === inc.work_order.id}
-                        onClick={() => handleVerification(inc.work_order!.id, 'fail')}
-                      >
-                        <AlertTriangle size={13} /> Still Broken (Trigger Replan)
-                      </button>
+            <AnimatePresence>
+              {pendingVerification.map(inc => (
+                <motion.div 
+                  key={inc.id}
+                  layout
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.96 }}
+                  style={{ 
+                    background: 'var(--status-success-bg)', 
+                    border: '1px solid var(--status-success-border)', 
+                    borderRadius: 'var(--radius-sm)', 
+                    padding: '1rem' 
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+                    <div>
+                      <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--status-success-text)' }}>
+                        Incident #{inc.id} · Space: {inc.room_code || 'Classroom'}
+                      </span>
+                      <p style={{ fontSize: '0.84rem', color: 'var(--text-body)', margin: '0.2rem 0 0' }}>
+                        {inc.description}
+                      </p>
                     </div>
-                  )}
-                </div>
-              </div>
-            ))}
+
+                    {inc.work_order && (
+                      <div style={{ display: 'flex', gap: '0.45rem' }}>
+                        <motion.button 
+                          whileHover={{ scale: 1.04 }}
+                          whileTap={{ scale: 0.96 }}
+                          type="button"
+                          className="btn btn-success btn-sm"
+                          disabled={verifyingId === inc.work_order.id}
+                          onClick={() => handleVerification(inc.work_order!.id, 'pass')}
+                        >
+                          <CheckCircle size={13} /> Verify Fixed
+                        </motion.button>
+                        <motion.button 
+                          whileHover={{ scale: 1.04 }}
+                          whileTap={{ scale: 0.96 }}
+                          type="button"
+                          className="btn btn-danger btn-sm"
+                          disabled={verifyingId === inc.work_order.id}
+                          onClick={() => handleVerification(inc.work_order!.id, 'fail')}
+                        >
+                          <AlertTriangle size={13} /> Still Broken (Trigger Replan)
+                        </motion.button>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
         )}
-      </div>
+      </motion.div>
 
-    </div>
+    </motion.div>
   );
 };

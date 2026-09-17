@@ -1,17 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { Incident, User } from '../types';
 import { AgentExecutionTracker } from './AgentExecutionTracker';
 import { 
   X, 
   MapPin, 
-  User as UserIcon, 
   Clock, 
   CheckCircle, 
   Wrench, 
   AlertTriangle,
   Play,
   RotateCcw,
-  Calendar,
   Layers,
   ShieldCheck,
   ClipboardList,
@@ -121,8 +120,20 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
   const workOrder = incident.work_order;
 
   return (
-    <div className="modal-overlay" onClick={onClose} role="dialog" aria-modal="true">
-      <div 
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="modal-overlay" 
+      onClick={onClose} 
+      role="dialog" 
+      aria-modal="true"
+    >
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.96, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96, y: 12 }}
+        transition={{ duration: 0.22, ease: "easeOut" }}
         className="modal-content" 
         onClick={e => e.stopPropagation()}
         style={{ maxWidth: '820px' }}
@@ -230,7 +241,8 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
                   </div>
                   <div className="stat-desc">Identified by Understanding Agent</div>
                 </div>
-                  <div className="stat-box">
+
+                <div className="stat-box">
                   <div className="stat-label">Urgency & Impact</div>
                   <div style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-main)' }}>
                     {incident.priority} Priority
@@ -413,7 +425,7 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
           </button>
         </div>
 
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };

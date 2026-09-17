@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Incident, Technician, Room, Equipment, TimetableItem, AnalyticsMetrics, User } from '../types';
 import { AgentExecutionTracker } from './AgentExecutionTracker';
 import { 
@@ -9,10 +10,7 @@ import {
   RotateCcw, 
   Inbox,
   Shield,
-  Layers,
-  Search,
-  MapPin,
-  Clock
+  Layers
 } from 'lucide-react';
 
 interface AdminConsoleProps {
@@ -28,6 +26,23 @@ interface AdminConsoleProps {
   onError: (msg: string) => void;
   onSuccess: (msg: string) => void;
 }
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.08, delayChildren: 0.04 }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.35, ease: "easeOut" as const }
+  }
+};
 
 export const AdminConsole: React.FC<AdminConsoleProps> = ({
   currentUser,
@@ -86,10 +101,18 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+    <motion.div 
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}
+    >
       
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+      <motion.div 
+        variants={itemVariants}
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}
+      >
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.2rem' }}>
             <h1 style={{ fontSize: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.45rem', color: 'var(--text-main)' }}>
@@ -104,61 +127,78 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
         </div>
 
         <div style={{ display: 'flex', gap: '0.45rem', alignItems: 'center' }}>
-          <button 
+          <motion.button 
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
             type="button" 
             className="btn btn-secondary btn-sm" 
             onClick={onRefresh}
           >
             <RotateCcw size={12} /> Refresh Data
-          </button>
+          </motion.button>
         </div>
-      </div>
+      </motion.div>
 
       {/* Sub-Navigation Tabs */}
-      <div className="tab-bar">
-        <button
+      <motion.div variants={itemVariants} className="tab-bar">
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
           type="button"
           className={`tab-btn ${activeSubTab === 'stream' ? 'active' : ''}`}
           onClick={() => setActiveSubTab('stream')}
         >
           <ClipboardList size={13} /> Incident Stream ({incidents.length})
-        </button>
-        <button
+        </motion.button>
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
           type="button"
           className={`tab-btn ${activeSubTab === 'spaces' ? 'active' : ''}`}
           onClick={() => setActiveSubTab('spaces')}
         >
           <Building2 size={13} /> Campus Spaces ({rooms.length})
-        </button>
-        <button
+        </motion.button>
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
           type="button"
           className={`tab-btn ${activeSubTab === 'technicians' ? 'active' : ''}`}
           onClick={() => setActiveSubTab('technicians')}
         >
           <Users size={13} /> Specialists ({technicians.length})
-        </button>
-        <button
+        </motion.button>
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
           type="button"
           className={`tab-btn ${activeSubTab === 'timetable' ? 'active' : ''}`}
           onClick={() => setActiveSubTab('timetable')}
         >
           <Calendar size={13} /> Reference Timetable ({timetable.length})
-        </button>
-        <button
+        </motion.button>
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
           type="button"
           className={`tab-btn ${activeSubTab === 'telemetry' ? 'active' : ''}`}
           onClick={() => setActiveSubTab('telemetry')}
         >
           <Layers size={13} /> Agent Telemetry
-        </button>
-      </div>
+        </motion.button>
+      </motion.div>
 
       {/* SUB-TAB 1: INCIDENTS STREAM */}
       {activeSubTab === 'stream' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <motion.div 
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
+        >
           
           {/* Filter Bar */}
-          <div className="card" style={{ padding: '0.85rem' }}>
+          <div className="card card-interactive" style={{ padding: '0.85rem' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem' }}>
               <div>
                 <label className="form-label" htmlFor="admin-filter-status">Filter Status</label>
@@ -224,66 +264,81 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {filteredIncidents.map(inc => (
-                <div 
-                  key={inc.id} 
-                  className="card card-interactive" 
-                  style={{ padding: '0.9rem 1.15rem' }}
-                  onClick={() => onSelectIncident && onSelectIncident(inc)}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.45rem', marginBottom: '0.4rem' }}>
-                    <div>
-                      <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-main)' }}>
-                        Incident #{inc.id} · {inc.room_code || 'General Space'}
-                      </span>
-                      <span style={{ fontSize: '0.84rem', color: 'var(--text-body)', marginLeft: '0.45rem' }}>
-                        {inc.description}
-                      </span>
+              <AnimatePresence>
+                {filteredIncidents.map(inc => (
+                  <motion.div 
+                    key={inc.id} 
+                    layout
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.96 }}
+                    whileHover={{ scale: 1.01, x: 2 }}
+                    whileTap={{ scale: 0.99 }}
+                    className="card card-interactive" 
+                    style={{ padding: '0.9rem 1.15rem' }}
+                    onClick={() => onSelectIncident && onSelectIncident(inc)}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.45rem', marginBottom: '0.4rem' }}>
+                      <div>
+                        <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-main)' }}>
+                          Incident #{inc.id} · {inc.room_code || 'General Space'}
+                        </span>
+                        <span style={{ fontSize: '0.84rem', color: 'var(--text-body)', marginLeft: '0.45rem' }}>
+                          {inc.description}
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '0.35rem' }}>
+                        <span className={`badge ${statusBadgeClass[inc.status] || 'badge-neutral'}`}>{inc.status}</span>
+                        <span className={`badge ${priorityBadgeClass[inc.priority] || 'badge-neutral'}`}>{inc.priority}</span>
+                        {inc.replan_count > 0 && (
+                          <span className="badge badge-replan">Replan #{inc.replan_count}</span>
+                        )}
+                      </div>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '0.35rem' }}>
-                      <span className={`badge ${statusBadgeClass[inc.status] || 'badge-neutral'}`}>{inc.status}</span>
-                      <span className={`badge ${priorityBadgeClass[inc.priority] || 'badge-neutral'}`}>{inc.priority}</span>
-                      {inc.replan_count > 0 && (
-                        <span className="badge badge-replan">Replan #{inc.replan_count}</span>
-                      )}
+                    <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', display: 'flex', gap: '0.85rem' }}>
+                      <span>Reporter: <b>{inc.reporter}</b></span>
+                      <span>Category: <b>{inc.category}</b></span>
+                      <span>Created: {new Date(inc.created_at).toLocaleString()}</span>
                     </div>
-                  </div>
-
-                  <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', display: 'flex', gap: '0.85rem' }}>
-                    <span>Reporter: <b>{inc.reporter}</b></span>
-                    <span>Category: <b>{inc.category}</b></span>
-                    <span>Created: {new Date(inc.created_at).toLocaleString()}</span>
-                  </div>
-                </div>
-              ))}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             </div>
           )}
 
-        </div>
+        </motion.div>
       )}
 
       {/* SUB-TAB 2: SPACES */}
       {activeSubTab === 'spaces' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div className="card" style={{ padding: '0.75rem' }}>
+        <motion.div 
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
+        >
+          <div className="card card-interactive" style={{ padding: '0.75rem' }}>
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
               <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-main)' }}>Filter Block:</span>
               {['ALL', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'S'].map(b => (
-                <button
+                <motion.button
                   key={b}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   type="button"
                   className={`btn btn-sm ${selectedBlock === b ? 'btn-primary' : 'btn-secondary'}`}
                   style={{ fontSize: '0.72rem', padding: '0.25rem 0.5rem' }}
                   onClick={() => setSelectedBlock(b)}
                 >
                   Block {b}
-                </button>
+                </motion.button>
               ))}
             </div>
           </div>
 
-          <div className="table-container">
+          <div className="table-container card-interactive">
             <table className="table">
               <thead>
                 <tr>
@@ -309,12 +364,17 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
               </tbody>
             </table>
           </div>
-        </div>
+        </motion.div>
       )}
 
       {/* SUB-TAB 3: TECHNICIANS FLEET */}
       {activeSubTab === 'technicians' && (
-        <div className="table-container">
+        <motion.div 
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          className="table-container card-interactive"
+        >
           <table className="table">
             <thead>
               <tr>
@@ -343,19 +403,24 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
               })}
             </tbody>
           </table>
-        </div>
+        </motion.div>
       )}
 
       {/* SUB-TAB 4: REFERENCE TIMETABLE */}
       {activeSubTab === 'timetable' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+        <motion.div 
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}
+        >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '0.84rem', color: 'var(--text-muted)' }}>
               Institutional Reference Timetable (Official Campus Academic Schedule)
             </span>
             <span className="badge badge-role">Reference Data</span>
           </div>
-          <div className="table-container">
+          <div className="table-container card-interactive">
             <table className="table">
               <thead>
                 <tr>
@@ -383,12 +448,17 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
               </tbody>
             </table>
           </div>
-        </div>
+        </motion.div>
       )}
 
       {/* SUB-TAB 5: AGENT TELEMETRY */}
       {activeSubTab === 'telemetry' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <motion.div 
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
+        >
           {incidents.length === 0 ? (
             <div className="empty-state">
               <div className="empty-state-icon"><Layers size={22} /></div>
@@ -398,7 +468,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               {incidents.slice(0, 5).map(inc => (
-                <div key={inc.id} className="card" style={{ padding: '1rem' }}>
+                <div key={inc.id} className="card card-interactive" style={{ padding: '1rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                     <span style={{ fontWeight: 700, fontSize: '0.92rem' }}>Incident #{inc.id} Telemetry · Space: {inc.room_code || 'Campus'}</span>
                     <span className={`badge ${statusBadgeClass[inc.status] || 'badge-neutral'}`}>{inc.status}</span>
@@ -408,9 +478,9 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
               ))}
             </div>
           )}
-        </div>
+        </motion.div>
       )}
 
-    </div>
+    </motion.div>
   );
 };

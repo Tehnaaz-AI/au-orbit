@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { Role, User } from '../types';
 import { 
   LogOut, 
@@ -10,7 +11,8 @@ import {
   Calendar,
   Layers,
   PlusCircle,
-  Building2
+  Building2,
+  ArrowRight
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -50,7 +52,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   // 1. Public Visitor Navbar
   if (!currentUser) {
     return (
-      <header className="navbar">
+      <header className="navbar" style={{ backdropFilter: 'blur(12px)', background: 'rgba(251, 249, 243, 0.92)' }}>
         <a 
           href="/" 
           className="navbar-brand" 
@@ -60,7 +62,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
         >
-          <div className="navbar-brand-mark">AU</div>
+          <motion.div whileHover={{ rotate: 8, scale: 1.08 }} className="navbar-brand-mark">AU</motion.div>
           <span>AUOrbit</span>
         </a>
 
@@ -106,20 +108,24 @@ export const Navbar: React.FC<NavbarProps> = ({
         </nav>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-          <button 
+          <motion.button 
+            whileHover={{ scale: 1.04, y: -1 }}
+            whileTap={{ scale: 0.96 }}
             type="button"
             className="btn btn-secondary btn-sm" 
             onClick={onSignIn}
           >
             Sign In
-          </button>
-          <button 
+          </motion.button>
+          <motion.button 
+            whileHover={{ scale: 1.04, y: -1, boxShadow: '0 6px 16px rgba(227, 83, 54, 0.25)' }}
+            whileTap={{ scale: 0.96 }}
             type="button"
             className="btn btn-primary btn-sm" 
             onClick={onGetStarted}
           >
-            Get Started
-          </button>
+            Get Started <ArrowRight size={13} />
+          </motion.button>
         </div>
       </header>
     );
@@ -152,7 +158,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             if (onSelectTab) onSelectTab('dashboard'); 
           }}
         >
-          <div className="navbar-brand-mark">AU</div>
+          <motion.div whileHover={{ rotate: 8, scale: 1.08 }} className="navbar-brand-mark">AU</motion.div>
           <span>AUOrbit</span>
         </a>
 
@@ -160,51 +166,59 @@ export const Navbar: React.FC<NavbarProps> = ({
           <ul className="nav-links">
             {/* Overview / Dashboard (All Roles) */}
             <li>
-              <button 
+              <motion.button 
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 type="button"
                 className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
                 onClick={() => onSelectTab && onSelectTab('dashboard')}
               >
                 <LayoutDashboard size={14} /> Overview
-              </button>
+              </motion.button>
             </li>
 
             {/* Student & Faculty: My Issues */}
             {(isStudent || isFaculty) && (
               <li>
-                <button 
+                <motion.button 
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   type="button"
                   className={`nav-item ${activeTab === 'my_issues' ? 'active' : ''}`}
                   onClick={() => onSelectTab && onSelectTab('my_issues')}
                 >
                   <ClipboardList size={14} /> {isStudent ? 'My Issues' : 'Classroom & Dept Issues'}
-                </button>
+                </motion.button>
               </li>
             )}
 
             {/* Student & Faculty: Report Issue */}
             {(isStudent || isFaculty) && (
               <li>
-                <button 
+                <motion.button 
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   type="button"
                   className={`nav-item ${activeTab === 'report_issue' ? 'active' : ''}`}
                   onClick={() => onSelectTab && onSelectTab('report_issue')}
                 >
                   <PlusCircle size={14} /> Report Issue
-                </button>
+                </motion.button>
               </li>
             )}
 
             {/* Technician: Assigned Work */}
             {isTechnician && (
               <li>
-                <button 
+                <motion.button 
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   type="button"
                   className={`nav-item ${activeTab === 'work_orders' ? 'active' : ''}`}
                   onClick={() => onSelectTab && onSelectTab('work_orders')}
                 >
                   <Wrench size={14} /> Assigned Work
-                </button>
+                </motion.button>
               </li>
             )}
 
@@ -212,49 +226,59 @@ export const Navbar: React.FC<NavbarProps> = ({
             {isAdmin && (
               <>
                 <li>
-                  <button 
+                  <motion.button 
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     type="button"
                     className={`nav-item ${activeTab === 'incidents' ? 'active' : ''}`}
                     onClick={() => onSelectTab && onSelectTab('incidents')}
                   >
                     <ClipboardList size={14} /> Incidents
-                  </button>
+                  </motion.button>
                 </li>
                 <li>
-                  <button 
+                  <motion.button 
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     type="button"
                     className={`nav-item ${activeTab === 'work_orders' ? 'active' : ''}`}
                     onClick={() => onSelectTab && onSelectTab('work_orders')}
                   >
                     <Wrench size={14} /> Work Orders
-                  </button>
+                  </motion.button>
                 </li>
                 <li>
-                  <button 
+                  <motion.button 
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     type="button"
                     className={`nav-item ${activeTab === 'resources' ? 'active' : ''}`}
                     onClick={() => onSelectTab && onSelectTab('resources')}
                   >
                     <Building2 size={14} /> Campus Resources
-                  </button>
+                  </motion.button>
                 </li>
                 <li>
-                  <button 
+                  <motion.button 
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     type="button"
                     className={`nav-item ${activeTab === 'timetable' ? 'active' : ''}`}
                     onClick={() => onSelectTab && onSelectTab('timetable')}
                   >
                     <Calendar size={14} /> Reference Timetable
-                  </button>
+                  </motion.button>
                 </li>
                 <li>
-                  <button 
+                  <motion.button 
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     type="button"
                     className={`nav-item ${activeTab === 'agent_runs' ? 'active' : ''}`}
                     onClick={() => onSelectTab && onSelectTab('agent_runs')}
                   >
                     <Layers size={14} /> Agent Telemetry
-                  </button>
+                  </motion.button>
                 </li>
               </>
             )}
@@ -276,15 +300,18 @@ export const Navbar: React.FC<NavbarProps> = ({
         </span>
 
         {/* User Profile Badge */}
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '0.55rem',
-          padding: '0.3rem 0.65rem',
-          background: 'var(--bg-surface)',
-          border: '1px solid var(--border-subtle)',
-          borderRadius: 'var(--radius-sm)'
-        }}>
+        <motion.div 
+          whileHover={{ scale: 1.02 }}
+          style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '0.55rem',
+            padding: '0.3rem 0.65rem',
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: 'var(--radius-sm)'
+          }}
+        >
           <div style={{ 
             width: 24, 
             height: 24, 
@@ -318,7 +345,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <LogOut size={13} />
           </button>
-        </div>
+        </motion.div>
 
       </div>
     </header>

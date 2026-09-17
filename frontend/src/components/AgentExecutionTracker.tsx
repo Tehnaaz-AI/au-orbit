@@ -1,23 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Incident, AgentEvent, AgentRun } from '../types';
 import { api } from '../api';
 import { 
-  Brain, 
-  MapPin, 
-  Flame, 
-  Users, 
-  Calendar, 
-  CheckCircle, 
-  AlertTriangle, 
   GitBranch, 
   Radio, 
   Code, 
-  Layers, 
   Check, 
-  Clock, 
-  Cpu, 
-  ShieldCheck, 
-  Activity,
   X
 } from 'lucide-react';
 
@@ -113,7 +102,9 @@ export const AgentExecutionTracker: React.FC<AgentExecutionTrackerProps> = ({ in
             <span>SSE Live Stream</span>
           </span>
           {events.length > 0 && (
-            <button
+            <motion.button
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
               type="button"
               className="btn btn-secondary btn-sm"
               style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem' }}
@@ -123,7 +114,7 @@ export const AgentExecutionTracker: React.FC<AgentExecutionTrackerProps> = ({ in
               }}
             >
               <Code size={12} /> View Technical Details
-            </button>
+            </motion.button>
           )}
         </div>
       </div>
@@ -157,85 +148,96 @@ export const AgentExecutionTracker: React.FC<AgentExecutionTrackerProps> = ({ in
               {/* Vertical connecting line */}
               <div style={{ position: 'absolute', left: '7px', top: '10px', bottom: '10px', width: '2px', background: 'var(--border-default)', zIndex: 0 }} />
 
-              {run1Events.map((evt, idx) => {
-                const isFailed = evt.status === 'FAILED' || evt.action.toLowerCase().includes('fail') || (evt.detail && evt.detail.outcome === 'fail');
-                const isLast = idx === run1Events.length - 1 && !hasReplanning;
+              <AnimatePresence>
+                {run1Events.map((evt, idx) => {
+                  const isFailed = evt.status === 'FAILED' || evt.action.toLowerCase().includes('fail') || (evt.detail && evt.detail.outcome === 'fail');
+                  const isLast = idx === run1Events.length - 1 && !hasReplanning;
 
-                return (
-                  <div 
-                    key={evt.id || idx}
-                    style={{ position: 'relative', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem', zIndex: 1 }}
-                  >
-                    {/* Node marker */}
-                    <div style={{ 
-                      position: 'absolute', 
-                      left: '-1.5rem', 
-                      top: '2px', 
-                      width: '16px', 
-                      height: '16px', 
-                      borderRadius: '50%', 
-                      background: isFailed ? 'var(--status-error-text)' : isLast ? 'var(--color-primary)' : '#FFFFFF', 
-                      border: `2px solid ${isFailed ? 'var(--status-error-text)' : isLast ? 'var(--color-primary)' : 'var(--border-default)'}`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: isFailed || isLast ? '#FFFFFF' : 'var(--text-muted)'
-                    }}>
-                      {isFailed ? <X size={10} /> : isLast ? <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#FFF' }} /> : <Check size={10} color="var(--status-success-text)" />}
-                    </div>
-
-                    {/* Content */}
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                        <span style={{ fontSize: '0.82rem', fontWeight: 700, color: isFailed ? 'var(--status-error-text)' : 'var(--text-main)' }}>
-                          {evt.agent}
-                        </span>
-                        <span className="badge badge-neutral" style={{ fontSize: '0.65rem' }}>
-                          {evt.action}
-                        </span>
+                  return (
+                    <motion.div 
+                      key={evt.id || idx}
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.25 }}
+                      style={{ position: 'relative', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem', zIndex: 1 }}
+                    >
+                      {/* Node marker */}
+                      <div style={{ 
+                        position: 'absolute', 
+                        left: '-1.5rem', 
+                        top: '2px', 
+                        width: '16px', 
+                        height: '16px', 
+                        borderRadius: '50%', 
+                        background: isFailed ? 'var(--status-error-text)' : isLast ? 'var(--color-primary)' : '#FFFFFF', 
+                        border: `2px solid ${isFailed ? 'var(--status-error-text)' : isLast ? 'var(--color-primary)' : 'var(--border-default)'}`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: isFailed || isLast ? '#FFFFFF' : 'var(--text-muted)'
+                      }}>
+                        {isFailed ? <X size={10} /> : isLast ? <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#FFF' }} /> : <Check size={10} color="var(--status-success-text)" />}
                       </div>
 
-                      <div style={{ fontSize: '0.78rem', color: 'var(--text-body)', marginTop: '0.15rem' }}>
-                        {formatEventDetail(evt)}
-                      </div>
-                    </div>
+                      {/* Content */}
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: isFailed ? 'var(--status-error-text)' : 'var(--text-main)' }}>
+                            {evt.agent}
+                          </span>
+                          <span className="badge badge-neutral" style={{ fontSize: '0.65rem' }}>
+                            {evt.action}
+                          </span>
+                        </div>
 
-                    {/* Timestamp & Drawer Trigger */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                        {evt.created_at ? new Date(evt.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : ''}
-                      </span>
-                      <button
-                        type="button"
-                        className="btn-ghost btn-sm"
-                        style={{ padding: '0.15rem', color: 'var(--text-dim)' }}
-                        onClick={() => {
-                          setSelectedEventDetails(evt);
-                          setShowTechnicalDrawer(true);
-                        }}
-                        title="View payload"
-                      >
-                        <Code size={12} />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-body)', marginTop: '0.15rem' }}>
+                          {formatEventDetail(evt)}
+                        </div>
+                      </div>
+
+                      {/* Timestamp & Drawer Trigger */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                          {evt.created_at ? new Date(evt.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : ''}
+                        </span>
+                        <motion.button
+                          whileHover={{ scale: 1.15 }}
+                          type="button"
+                          className="btn-ghost btn-sm"
+                          style={{ padding: '0.15rem', color: 'var(--text-dim)' }}
+                          onClick={() => {
+                            setSelectedEventDetails(evt);
+                            setShowTechnicalDrawer(true);
+                          }}
+                          title="View payload"
+                        >
+                          <Code size={12} />
+                        </motion.button>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
             </div>
           )}
         </div>
 
         {/* REPLANNING BRANCH (When Self-Healing Loop Triggers) */}
         {hasReplanning && (
-          <div style={{ 
-            background: 'var(--status-replan-bg)', 
-            border: '1px solid var(--status-replan-border)', 
-            borderRadius: 'var(--radius-sm)', 
-            padding: '0.85rem 1rem',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.5rem'
-          }}>
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.98, y: -4 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            style={{ 
+              background: 'var(--status-replan-bg)', 
+              border: '1px solid var(--status-replan-border)', 
+              borderRadius: 'var(--radius-sm)', 
+              padding: '0.85rem 1rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.5rem'
+            }}
+          >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.84rem', fontWeight: 700, color: 'var(--status-replan-text)' }}>
               <GitBranch size={16} />
               <span>Autonomous Self-Healing Loop Triggered (Replan #{incident.replan_count || 1})</span>
@@ -243,17 +245,22 @@ export const AgentExecutionTracker: React.FC<AgentExecutionTrackerProps> = ({ in
             <p style={{ fontSize: '0.78rem', color: 'var(--text-body)', margin: 0 }}>
               Verification failure detected in Run #1. Replanning agent updated state machine, reassessed constraints, and allocated alternate specialist for Run #2.
             </p>
-          </div>
+          </motion.div>
         )}
 
         {/* RUN #2 Section (Self-Healing Recovery) */}
         {runs.length > 1 && (
-          <div style={{ 
-            background: '#FFFFFF', 
-            border: '1px solid var(--status-success-border)', 
-            borderRadius: 'var(--radius-sm)', 
-            padding: '1rem' 
-          }}>
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35 }}
+            style={{ 
+              background: '#FFFFFF', 
+              border: '1px solid var(--status-success-border)', 
+              borderRadius: 'var(--radius-sm)', 
+              padding: '1rem' 
+            }}
+          >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.5rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                 <span className="badge badge-success mono" style={{ fontSize: '0.72rem' }}>RUN 02</span>
@@ -267,76 +274,91 @@ export const AgentExecutionTracker: React.FC<AgentExecutionTrackerProps> = ({ in
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', position: 'relative', paddingLeft: '1.5rem' }}>
               <div style={{ position: 'absolute', left: '7px', top: '10px', bottom: '10px', width: '2px', background: 'var(--status-success-border)', zIndex: 0 }} />
 
-              {run2Events.map((evt, idx) => {
-                const isLast = idx === run2Events.length - 1;
+              <AnimatePresence>
+                {run2Events.map((evt, idx) => {
+                  const isLast = idx === run2Events.length - 1;
 
-                return (
-                  <div 
-                    key={evt.id || idx}
-                    style={{ position: 'relative', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem', zIndex: 1 }}
-                  >
-                    <div style={{ 
-                      position: 'absolute', 
-                      left: '-1.5rem', 
-                      top: '2px', 
-                      width: '16px', 
-                      height: '16px', 
-                      borderRadius: '50%', 
-                      background: isLast && incident.status === 'RESOLVED' ? 'var(--status-success-text)' : '#FFFFFF', 
-                      border: '2px solid var(--status-success-text)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#FFFFFF'
-                    }}>
-                      <Check size={10} color={isLast && incident.status === 'RESOLVED' ? '#FFFFFF' : 'var(--status-success-text)'} />
-                    </div>
-
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                        <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--status-success-text)' }}>
-                          {evt.agent}
-                        </span>
-                        <span className="badge badge-neutral" style={{ fontSize: '0.65rem' }}>
-                          {evt.action}
-                        </span>
+                  return (
+                    <motion.div 
+                      key={evt.id || idx}
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.25 }}
+                      style={{ position: 'relative', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem', zIndex: 1 }}
+                    >
+                      <div style={{ 
+                        position: 'absolute', 
+                        left: '-1.5rem', 
+                        top: '2px', 
+                        width: '16px', 
+                        height: '16px', 
+                        borderRadius: '50%', 
+                        background: isLast && incident.status === 'RESOLVED' ? 'var(--status-success-text)' : '#FFFFFF', 
+                        border: '2px solid var(--status-success-text)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#FFFFFF'
+                      }}>
+                        <Check size={10} color={isLast && incident.status === 'RESOLVED' ? '#FFFFFF' : 'var(--status-success-text)'} />
                       </div>
 
-                      <div style={{ fontSize: '0.78rem', color: 'var(--text-body)', marginTop: '0.15rem' }}>
-                        {formatEventDetail(evt)}
-                      </div>
-                    </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--status-success-text)' }}>
+                            {evt.agent}
+                          </span>
+                          <span className="badge badge-neutral" style={{ fontSize: '0.65rem' }}>
+                            {evt.action}
+                          </span>
+                        </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                        {evt.created_at ? new Date(evt.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : ''}
-                      </span>
-                      <button
-                        type="button"
-                        className="btn-ghost btn-sm"
-                        style={{ padding: '0.15rem', color: 'var(--text-dim)' }}
-                        onClick={() => {
-                          setSelectedEventDetails(evt);
-                          setShowTechnicalDrawer(true);
-                        }}
-                        title="View payload"
-                      >
-                        <Code size={12} />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-body)', marginTop: '0.15rem' }}>
+                          {formatEventDetail(evt)}
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                          {evt.created_at ? new Date(evt.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : ''}
+                        </span>
+                        <motion.button
+                          whileHover={{ scale: 1.15 }}
+                          type="button"
+                          className="btn-ghost btn-sm"
+                          style={{ padding: '0.15rem', color: 'var(--text-dim)' }}
+                          onClick={() => {
+                            setSelectedEventDetails(evt);
+                            setShowTechnicalDrawer(true);
+                          }}
+                          title="View payload"
+                        >
+                          <Code size={12} />
+                        </motion.button>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
             </div>
-          </div>
+          </motion.div>
         )}
 
       </div>
 
       {/* Technical Details Modal / Drawer */}
       {showTechnicalDrawer && selectedEventDetails && (
-        <div className="modal-overlay" onClick={() => setShowTechnicalDrawer(false)}>
-          <div 
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="modal-overlay" 
+          onClick={() => setShowTechnicalDrawer(false)}
+        >
+          <motion.div 
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
             className="modal-content" 
             onClick={e => e.stopPropagation()}
             style={{ maxWidth: '640px' }}
@@ -389,8 +411,8 @@ export const AgentExecutionTracker: React.FC<AgentExecutionTrackerProps> = ({ in
                 Close
               </button>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
 
     </div>

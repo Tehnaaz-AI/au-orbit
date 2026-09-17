@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Incident, Room, User } from '../types';
 import { api } from '../api';
 import { 
@@ -22,6 +23,23 @@ interface StudentPortalProps {
   onError: (msg: string) => void;
   onSuccess: (msg: string) => void;
 }
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.08, delayChildren: 0.04 }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.35, ease: "easeOut" as const }
+  }
+};
 
 export const StudentPortal: React.FC<StudentPortalProps> = ({
   currentUser,
@@ -77,10 +95,18 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+    <motion.div 
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}
+    >
       
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+      <motion.div 
+        variants={itemVariants}
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}
+      >
         <div>
           <h1 style={{ fontSize: '1.5rem', marginBottom: '0.2rem', color: 'var(--text-main)' }}>
             Student Issue Hub
@@ -90,17 +116,19 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
           </p>
         </div>
 
-        <button 
+        <motion.button 
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.97 }}
           type="button" 
           className="btn btn-secondary btn-sm" 
           onClick={onRefresh}
         >
           <RotateCcw size={13} /> Refresh
-        </button>
-      </div>
+        </motion.button>
+      </motion.div>
 
       {/* Report Issue Card */}
-      <div className="card">
+      <motion.div variants={itemVariants} className="card card-interactive">
         <div className="card-header">
           <span className="card-title">
             <PlusCircle size={16} color="var(--color-primary)" />
@@ -109,15 +137,19 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
         </div>
 
         {submittedIncident ? (
-          <div style={{ 
-            padding: '1.25rem', 
-            background: 'var(--status-success-bg)', 
-            borderRadius: 'var(--radius-sm)',
-            border: '1px solid var(--status-success-border)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.75rem'
-          }}>
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            style={{ 
+              padding: '1.25rem', 
+              background: 'var(--status-success-bg)', 
+              borderRadius: 'var(--radius-sm)',
+              border: '1px solid var(--status-success-border)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.75rem'
+            }}
+          >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--status-success-text)', fontWeight: 700, fontSize: '0.9rem' }}>
               <CheckCircle size={18} />
               <span>Incident #{submittedIncident.id} reported</span>
@@ -127,7 +159,9 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
             </p>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               {onSelectIncident && (
-                <button 
+                <motion.button 
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
                   type="button" 
                   className="btn btn-primary btn-sm"
                   onClick={() => {
@@ -136,17 +170,19 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                   }}
                 >
                   View Live Progress <ArrowRight size={13} />
-                </button>
+                </motion.button>
               )}
-              <button 
+              <motion.button 
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
                 type="button" 
                 className="btn btn-secondary btn-sm"
                 onClick={() => setSubmittedIncident(null)}
               >
                 Report Another
-              </button>
+              </motion.button>
             </div>
-          </div>
+          </motion.div>
         ) : (
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div className="form-group" style={{ marginBottom: 0 }}>
@@ -174,20 +210,22 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
               />
             </div>
 
-            <button 
+            <motion.button 
+              whileHover={{ scale: 1.015 }}
+              whileTap={{ scale: 0.985 }}
               type="submit" 
               className="btn btn-primary" 
               disabled={submitting || !description.trim()}
               style={{ width: '100%' }}
             >
               {submitting ? 'Submitting...' : 'Report Issue'} <Send size={14} />
-            </button>
+            </motion.button>
           </form>
         )}
-      </div>
+      </motion.div>
 
       {/* My Reported Issues Feed */}
-      <div className="card">
+      <motion.div variants={itemVariants} className="card card-interactive">
         <div className="card-header">
           <span className="card-title">
             <ClipboardList size={16} color="var(--color-primary-dark)" />
@@ -207,61 +245,69 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-            {myIncidents.map(inc => (
-              <div 
-                key={inc.id}
-                className="card-interactive"
-                onClick={() => onSelectIncident && onSelectIncident(inc)}
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'space-between',
-                  padding: '0.75rem 0.85rem',
-                  border: '1px solid var(--border-subtle)',
-                  borderRadius: 'var(--radius-sm)',
-                  gap: '0.75rem'
-                }}
-              >
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.2rem' }}>
-                    <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-main)' }}>
-                      #{inc.id}
-                    </span>
-                    <span className={`badge ${statusBadgeClass[inc.status] || 'badge-neutral'}`}>
-                      {inc.status}
-                    </span>
+            <AnimatePresence>
+              {myIncidents.map(inc => (
+                <motion.div 
+                  key={inc.id}
+                  layout
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.96 }}
+                  whileHover={{ scale: 1.01, x: 2 }}
+                  whileTap={{ scale: 0.99 }}
+                  className="card-interactive"
+                  onClick={() => onSelectIncident && onSelectIncident(inc)}
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between',
+                    padding: '0.75rem 0.85rem',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: 'var(--radius-sm)',
+                    gap: '0.75rem'
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.2rem' }}>
+                      <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-main)' }}>
+                        #{inc.id}
+                      </span>
+                      <span className={`badge ${statusBadgeClass[inc.status] || 'badge-neutral'}`}>
+                        {inc.status}
+                      </span>
+                    </div>
+
+                    <div style={{ fontSize: '0.82rem', color: 'var(--text-body)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {inc.description}
+                    </div>
+
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <MapPin size={11} /> {inc.room_code || 'Campus Space'}
+                      </span>
+                      <span>·</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <Clock size={11} /> {new Date(inc.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
                   </div>
 
-                  <div style={{ fontSize: '0.82rem', color: 'var(--text-body)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {inc.description}
-                  </div>
-
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                      <MapPin size={11} /> {inc.room_code || 'Campus Space'}
-                    </span>
-                    <span>·</span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                      <Clock size={11} /> {new Date(inc.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-                </div>
-
-                {onSelectIncident && (
-                  <button 
-                    type="button" 
-                    className="btn btn-secondary btn-sm"
-                    style={{ flexShrink: 0 }}
-                  >
-                    View Issue
-                  </button>
-                )}
-              </div>
-            ))}
+                  {onSelectIncident && (
+                    <button 
+                      type="button" 
+                      className="btn btn-secondary btn-sm"
+                      style={{ flexShrink: 0 }}
+                    >
+                      View Issue
+                    </button>
+                  )}
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
         )}
-      </div>
+      </motion.div>
 
-    </div>
+    </motion.div>
   );
 };

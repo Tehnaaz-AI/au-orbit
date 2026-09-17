@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Incident, Technician, User } from '../types';
 import { api } from '../api';
 import { 
@@ -9,7 +10,6 @@ import {
   MapPin, 
   Radio, 
   Inbox,
-  Clock,
   ClipboardList
 } from 'lucide-react';
 
@@ -22,6 +22,23 @@ interface TechnicianPortalProps {
   onError: (msg: string) => void;
   onSuccess: (msg: string) => void;
 }
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.08, delayChildren: 0.04 }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.35, ease: "easeOut" as const }
+  }
+};
 
 export const TechnicianPortal: React.FC<TechnicianPortalProps> = ({
   currentUser,
@@ -108,10 +125,19 @@ export const TechnicianPortal: React.FC<TechnicianPortalProps> = ({
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+    <motion.div 
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}
+    >
       
       {/* Technician Status Header */}
-      <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+      <motion.div 
+        variants={itemVariants}
+        className="card card-interactive" 
+        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <div style={{ 
             width: 36, height: 36, borderRadius: 'var(--radius-sm)', background: 'var(--color-primary-subtle)', 
@@ -135,25 +161,29 @@ export const TechnicianPortal: React.FC<TechnicianPortalProps> = ({
         </div>
 
         <div style={{ display: 'flex', gap: '0.45rem' }}>
-          <button 
+          <motion.button 
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
             type="button" 
             className={`btn btn-sm ${activeTech?.status === 'AVAILABLE' ? 'btn-secondary' : 'btn-success'}`}
             onClick={toggleTechStatus}
           >
             <Radio size={12} /> {activeTech?.status === 'AVAILABLE' ? 'Set Busy' : 'Set Available'}
-          </button>
-          <button 
+          </motion.button>
+          <motion.button 
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
             type="button" 
             className="btn btn-secondary btn-sm" 
             onClick={onRefresh}
           >
             <RotateCcw size={12} /> Refresh
-          </button>
+          </motion.button>
         </div>
-      </div>
+      </motion.div>
 
       {/* Assigned Tasks Feed */}
-      <div className="card">
+      <motion.div variants={itemVariants} className="card card-interactive">
         <div className="card-header">
           <span className="card-title">
             <ClipboardList size={16} color="var(--color-primary)" />
@@ -174,112 +204,131 @@ export const TechnicianPortal: React.FC<TechnicianPortalProps> = ({
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-            {myWorkOrders.map(inc => {
-              const wo = inc.work_order;
-              if (!wo) return null;
-              const isStarted = wo.status === 'IN_PROGRESS';
+            <AnimatePresence>
+              {myWorkOrders.map(inc => {
+                const wo = inc.work_order;
+                if (!wo) return null;
+                const isStarted = wo.status === 'IN_PROGRESS';
 
-              return (
-                <div 
-                  key={inc.id}
-                  style={{
-                    background: isStarted ? 'var(--color-primary-subtle)' : 'var(--bg-surface)',
-                    border: '1px solid',
-                    borderColor: isStarted ? 'var(--color-primary)' : 'var(--border-subtle)',
-                    borderRadius: 'var(--radius-sm)',
-                    padding: '1rem'
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.2rem' }}>
-                        <span style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text-main)' }}>
-                          Work Order #{wo.id} (Incident #{inc.id})
-                        </span>
-                        <span className="badge badge-neutral">{inc.priority}</span>
-                        <span className={`badge ${wo.status === 'COMPLETED' ? 'badge-success' : 'badge-info'}`}>{wo.status}</span>
+                return (
+                  <motion.div 
+                    key={inc.id}
+                    layout
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.96 }}
+                    style={{
+                      background: isStarted ? 'var(--color-primary-subtle)' : 'var(--bg-surface)',
+                      border: '1px solid',
+                      borderColor: isStarted ? 'var(--color-primary)' : 'var(--border-subtle)',
+                      borderRadius: 'var(--radius-sm)',
+                      padding: '1rem'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.2rem' }}>
+                          <span style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text-main)' }}>
+                            Work Order #{wo.id} (Incident #{inc.id})
+                          </span>
+                          <span className="badge badge-neutral">{inc.priority}</span>
+                          <span className={`badge ${wo.status === 'COMPLETED' ? 'badge-success' : 'badge-info'}`}>{wo.status}</span>
+                        </div>
+                        
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--color-primary-dark)', fontSize: '0.82rem', fontWeight: 600 }}>
+                          <MapPin size={12} /> {inc.room_code || 'General Space'}
+                        </div>
+                        
+                        <p style={{ fontSize: '0.82rem', color: 'var(--text-body)', margin: '0.25rem 0 0' }}>
+                          {inc.description}
+                        </p>
                       </div>
-                      
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--color-primary-dark)', fontSize: '0.82rem', fontWeight: 600 }}>
-                        <MapPin size={12} /> {inc.room_code || 'General Space'}
-                      </div>
-                      
-                      <p style={{ fontSize: '0.82rem', color: 'var(--text-body)', margin: '0.25rem 0 0' }}>
-                        {inc.description}
-                      </p>
-                    </div>
 
-                    <div style={{ display: 'flex', gap: '0.4rem' }}>
-                      {wo.status !== 'IN_PROGRESS' && wo.status !== 'COMPLETED' && (
-                        <>
-                          <button 
+                      <div style={{ display: 'flex', gap: '0.4rem' }}>
+                        {wo.status !== 'IN_PROGRESS' && wo.status !== 'COMPLETED' && (
+                          <>
+                            <motion.button 
+                              whileHover={{ scale: 1.04 }}
+                              whileTap={{ scale: 0.96 }}
+                              type="button"
+                              className="btn btn-primary btn-sm"
+                              disabled={actingWorkId === wo.id}
+                              onClick={() => handleStartWork(wo.id)}
+                            >
+                              <Play size={12} /> Start Job
+                            </motion.button>
+                            <motion.button 
+                              whileHover={{ scale: 1.04 }}
+                              whileTap={{ scale: 0.96 }}
+                              type="button"
+                              className="btn btn-danger btn-sm"
+                              disabled={actingWorkId === wo.id}
+                              onClick={() => handleRejectWork(wo.id)}
+                              title="Decline assignment and trigger autonomous replan"
+                            >
+                              <RotateCcw size={12} /> Decline
+                            </motion.button>
+                          </>
+                        )}
+
+                        {wo.status === 'IN_PROGRESS' && (
+                          <motion.button 
+                            whileHover={{ scale: 1.04 }}
+                            whileTap={{ scale: 0.96 }}
                             type="button"
-                            className="btn btn-primary btn-sm"
+                            className="btn btn-success btn-sm"
                             disabled={actingWorkId === wo.id}
-                            onClick={() => handleStartWork(wo.id)}
+                            onClick={() => setShowCompleteModal(wo.id)}
                           >
-                            <Play size={12} /> Start Job
-                          </button>
-                          <button 
-                            type="button"
-                            className="btn btn-danger btn-sm"
-                            disabled={actingWorkId === wo.id}
-                            onClick={() => handleRejectWork(wo.id)}
-                            title="Decline assignment and trigger autonomous replan"
+                            <CheckCircle size={12} /> Complete & Request Verification
+                          </motion.button>
+                        )}
+
+                        {onSelectIncident && (
+                          <motion.button 
+                            whileHover={{ scale: 1.04 }}
+                            whileTap={{ scale: 0.96 }}
+                            type="button" 
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => onSelectIncident(inc)}
                           >
-                            <RotateCcw size={12} /> Decline
-                          </button>
-                        </>
-                      )}
-
-                      {wo.status === 'IN_PROGRESS' && (
-                        <button 
-                          type="button"
-                          className="btn btn-success btn-sm"
-                          disabled={actingWorkId === wo.id}
-                          onClick={() => setShowCompleteModal(wo.id)}
-                        >
-                          <CheckCircle size={12} /> Complete & Request Verification
-                        </button>
-                      )}
-
-                      {onSelectIncident && (
-                        <button 
-                          type="button" 
-                          className="btn btn-secondary btn-sm"
-                          onClick={() => onSelectIncident(inc)}
-                        >
-                          Details
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {showCompleteModal === wo.id && (
-                    <div style={{ marginTop: '0.75rem', padding: '0.75rem', background: '#FFFFFF', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-sm)' }}>
-                      <label className="form-label" htmlFor="tech-notes" style={{ fontSize: '0.76rem' }}>Restoration & Calibration Notes</label>
-                      <input
-                        id="tech-notes"
-                        type="text"
-                        className="form-input"
-                        value={completionNotes}
-                        onChange={e => setCompletionNotes(e.target.value)}
-                        placeholder="e.g., Replaced lamp, tested HDMI input at 1080p resolution."
-                        style={{ marginBottom: '0.5rem', fontSize: '0.82rem' }}
-                      />
-                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.35rem' }}>
-                        <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowCompleteModal(null)}>Cancel</button>
-                        <button type="button" className="btn btn-success btn-sm" onClick={() => handleCompleteWork(wo.id)}>Submit & Complete</button>
+                            Details
+                          </motion.button>
+                        )}
                       </div>
                     </div>
-                  )}
-                </div>
-              );
-            })}
+
+                    {showCompleteModal === wo.id && (
+                      <motion.div 
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        style={{ marginTop: '0.75rem', padding: '0.75rem', background: '#FFFFFF', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-sm)' }}
+                      >
+                        <label className="form-label" htmlFor="tech-notes" style={{ fontSize: '0.76rem' }}>Restoration & Calibration Notes</label>
+                        <input
+                          id="tech-notes"
+                          type="text"
+                          className="form-input"
+                          value={completionNotes}
+                          onChange={e => setCompletionNotes(e.target.value)}
+                          placeholder="e.g., Replaced lamp, tested HDMI input at 1080p resolution."
+                          style={{ marginBottom: '0.5rem', fontSize: '0.82rem' }}
+                        />
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.35rem' }}>
+                          <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowCompleteModal(null)}>Cancel</button>
+                          <button type="button" className="btn btn-success btn-sm" onClick={() => handleCompleteWork(wo.id)}>Submit & Complete</button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
           </div>
         )}
-      </div>
+      </motion.div>
 
-    </div>
+    </motion.div>
   );
 };
