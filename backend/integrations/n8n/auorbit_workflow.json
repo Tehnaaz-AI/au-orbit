@@ -1,0 +1,82 @@
+{
+  "name": "AUOrbit WhatsApp Multi-Agent Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-inbound",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "node-webhook-1",
+      "name": "Incoming WhatsApp Message"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8000/api/whatsapp/inbound",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"Body\": \"{{ $json.body.Body || $json.body.description || 'Projector in I-302 is not working' }}\",\n  \"From\": \"{{ $json.body.From || 'whatsapp:+1234567890' }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        0
+      ],
+      "id": "node-auorbit-dispatch",
+      "name": "AUOrbit Multi-Agent Dispatch"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"success\",\n  \"incident_id\": {{ $json.incident_id }},\n  \"reply\": \"{{ $json.reply }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        440,
+        0
+      ],
+      "id": "node-respond-1",
+      "name": "Respond to WhatsApp"
+    }
+  ],
+  "connections": {
+    "Incoming WhatsApp Message": {
+      "main": [
+        [
+          {
+            "node": "AUOrbit Multi-Agent Dispatch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AUOrbit Multi-Agent Dispatch": {
+      "main": [
+        [
+          {
+            "node": "Respond to WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
