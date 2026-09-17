@@ -26,7 +26,7 @@ import { IncidentDetailModal } from './components/IncidentDetailModal';
 import { Footer } from './components/Footer';
 
 // Icons
-import { AlertCircle, CheckCircle2, X } from 'lucide-react';
+import { AlertCircle, CheckCircle, X } from 'lucide-react';
 import './style.css';
 
 interface ToastAlert {
@@ -65,7 +65,7 @@ export function App() {
   // Auto-dismiss toast
   useEffect(() => {
     if (toast) {
-      const timer = setTimeout(() => setToast(null), 4500);
+      const timer = setTimeout(() => setToast(null), 4000);
       return () => clearTimeout(timer);
     }
   }, [toast]);
@@ -142,12 +142,11 @@ export function App() {
     showSuccess('You have been securely signed out.');
   };
 
-  // 1. PUBLIC EXPERIENCE (Landing Page or Integrated Sign In / Register Shell)
+  // 1. PUBLIC VISITOR EXPERIENCE
   if (!currentUser) {
     if (showAuthScreen) {
       return (
         <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-page)' }}>
-          {/* Top Navbar */}
           <Navbar
             currentUser={null}
             onSelectTab={() => setShowAuthScreen(false)}
@@ -155,17 +154,15 @@ export function App() {
             onGetStarted={() => setShowAuthScreen(true)}
           />
 
-          {/* Toast Notification */}
           {toast && (
             <div className="toast-bar" style={{ borderColor: toast.type === 'error' ? 'var(--status-error-border)' : 'var(--color-primary)' }}>
-              {toast.type === 'error' ? <AlertCircle size={16} color="var(--status-error-text)" /> : <CheckCircle2 size={16} color="var(--color-primary)" />}
-              <span style={{ fontSize: '0.85rem' }}>{toast.message}</span>
-              <button className="btn-ghost btn-sm" onClick={() => setToast(null)} style={{ padding: 2, color: '#fff' }}><X size={14} /></button>
+              {toast.type === 'error' ? <AlertCircle size={15} color="var(--status-error-text)" /> : <CheckCircle size={15} color="var(--color-primary)" />}
+              <span style={{ fontSize: '0.84rem' }}>{toast.message}</span>
+              <button className="btn-ghost btn-sm" onClick={() => setToast(null)} style={{ padding: 2, color: '#fff' }}><X size={13} /></button>
             </div>
           )}
 
-          {/* Integrated Auth View */}
-          <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1.5rem' }}>
+          <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1.25rem' }}>
             <LoginScreen
               onLoginSuccess={handleLoginSuccess}
               onError={showError}
@@ -174,7 +171,6 @@ export function App() {
             />
           </main>
 
-          {/* Consistent Footer */}
           <Footer
             onNavigate={() => setShowAuthScreen(false)}
             onSignIn={() => setShowAuthScreen(true)}
@@ -186,7 +182,6 @@ export function App() {
 
     return (
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-page)' }}>
-        {/* Top Navbar */}
         <Navbar
           currentUser={null}
           onSelectTab={() => setShowAuthScreen(false)}
@@ -194,16 +189,14 @@ export function App() {
           onGetStarted={() => setShowAuthScreen(true)}
         />
 
-        {/* Toast Notification */}
         {toast && (
           <div className="toast-bar" style={{ borderColor: toast.type === 'error' ? 'var(--status-error-border)' : 'var(--color-primary)' }}>
-            {toast.type === 'error' ? <AlertCircle size={16} color="var(--status-error-text)" /> : <CheckCircle2 size={16} color="var(--color-primary)" />}
-            <span style={{ fontSize: '0.85rem' }}>{toast.message}</span>
-            <button className="btn-ghost btn-sm" onClick={() => setToast(null)} style={{ padding: 2, color: '#fff' }}><X size={14} /></button>
+            {toast.type === 'error' ? <AlertCircle size={15} color="var(--status-error-text)" /> : <CheckCircle size={15} color="var(--color-primary)" />}
+            <span style={{ fontSize: '0.84rem' }}>{toast.message}</span>
+            <button className="btn-ghost btn-sm" onClick={() => setToast(null)} style={{ padding: 2, color: '#fff' }}><X size={13} /></button>
           </div>
         )}
 
-        {/* Public Landing Page */}
         <main style={{ flex: 1 }}>
           <LandingPage
             onGetStarted={() => setShowAuthScreen(true)}
@@ -212,7 +205,6 @@ export function App() {
           />
         </main>
 
-        {/* Consistent Footer */}
         <Footer
           onNavigate={() => setShowAuthScreen(false)}
           onSignIn={() => setShowAuthScreen(true)}
@@ -222,7 +214,7 @@ export function App() {
     );
   }
 
-  // 2. AUTHENTICATED USER EXPERIENCE (Role-Specific Operational Platform)
+  // 2. AUTHENTICATED USER EXPERIENCE
   const isTechnician = currentUser.role === 'TECHNICIAN';
   const isStudent = currentUser.role === 'STUDENT';
   const isFaculty = currentUser.role === 'FACULTY';
@@ -248,19 +240,20 @@ export function App() {
         {/* Toast Alert Bar */}
         {toast && (
           <div className="toast-bar" style={{ borderColor: toast.type === 'error' ? 'var(--status-error-border)' : 'var(--color-primary)' }}>
-            {toast.type === 'error' ? <AlertCircle size={16} color="var(--status-error-text)" /> : <CheckCircle2 size={16} color="var(--color-primary)" />}
-            <span style={{ fontSize: '0.85rem' }}>{toast.message}</span>
-            <button className="btn-ghost btn-sm" onClick={() => setToast(null)} style={{ padding: 2, color: '#fff' }}><X size={14} /></button>
+            {toast.type === 'error' ? <AlertCircle size={15} color="var(--status-error-text)" /> : <CheckCircle size={15} color="var(--color-primary)" />}
+            <span style={{ fontSize: '0.84rem' }}>{toast.message}</span>
+            <button className="btn-ghost btn-sm" onClick={() => setToast(null)} style={{ padding: 2, color: '#fff' }}><X size={13} /></button>
           </div>
         )}
 
-        {/* Tab 1: DASHBOARD */}
+        {/* Tab 1: OVERVIEW / DASHBOARD */}
         {activeTab === 'dashboard' && (
           isTechnician ? (
             <TechnicianPortal
               currentUser={currentUser}
               incidents={incidents}
               technicians={technicians}
+              onSelectIncident={setSelectedIncident}
               onRefresh={refreshAll}
               onError={showError}
               onSuccess={showSuccess}
@@ -278,71 +271,67 @@ export function App() {
           )
         )}
 
-        {/* Tab 2: INCIDENTS */}
-        {activeTab === 'incidents' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <h1 style={{ fontSize: '1.65rem', marginBottom: '0.25rem', color: 'var(--text-main)' }}>
-                  {isStudent ? 'My Reported Incidents' : isFaculty ? 'Department & Classroom Incidents' : 'Campus Incident Oversight'}
-                </h1>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>
-                  {isStudent 
-                    ? 'Track real-time status and agent dispatch for your submitted issue reports.' 
-                    : isFaculty 
-                    ? 'Classroom issues linked with active timetable schedules and verification checks.' 
-                    : 'Campus-wide operational incidents managed by the autonomous multi-agent pipeline.'}
-                </p>
-              </div>
-            </div>
-
-            {isStudent && (
-              <StudentPortal
-                currentUser={currentUser}
-                incidents={incidents}
-                rooms={rooms}
-                onRefresh={refreshAll}
-                onError={showError}
-                onSuccess={showSuccess}
-              />
-            )}
-
-            {isFaculty && (
-              <FacultyPortal
-                currentUser={currentUser}
-                incidents={incidents}
-                timetable={timetable}
-                rooms={rooms}
-                onRefresh={refreshAll}
-                onError={showError}
-                onSuccess={showSuccess}
-              />
-            )}
-
-            {isAdmin && (
-              <AdminConsole
-                currentUser={currentUser}
-                incidents={incidents}
-                technicians={technicians}
-                rooms={rooms}
-                equipment={equipment}
-                timetable={timetable}
-                analytics={analytics}
-                onRefresh={refreshAll}
-                onError={showError}
-                onSuccess={showSuccess}
-              />
-            )}
-          </div>
+        {/* Tab 2: MY ISSUES / REPORT ISSUE (Student & Faculty) */}
+        {(activeTab === 'my_issues' || activeTab === 'report_issue') && (
+          isStudent ? (
+            <StudentPortal
+              currentUser={currentUser}
+              incidents={incidents}
+              rooms={rooms}
+              onSelectIncident={setSelectedIncident}
+              onRefresh={refreshAll}
+              onError={showError}
+              onSuccess={showSuccess}
+            />
+          ) : isFaculty ? (
+            <FacultyPortal
+              currentUser={currentUser}
+              incidents={incidents}
+              timetable={timetable}
+              rooms={rooms}
+              onSelectIncident={setSelectedIncident}
+              onRefresh={refreshAll}
+              onError={showError}
+              onSuccess={showSuccess}
+            />
+          ) : (
+            <Dashboard
+              currentUser={currentUser}
+              incidents={incidents}
+              analytics={analytics}
+              onSelectIncident={setSelectedIncident}
+              onRefresh={refreshAll}
+              onError={showError}
+              onSuccess={showSuccess}
+            />
+          )
         )}
 
-        {/* Tab 3: WORK ORDERS */}
+        {/* Tab 3: INCIDENTS (Admin Oversight) */}
+        {activeTab === 'incidents' && isAdmin && (
+          <AdminConsole
+            currentUser={currentUser}
+            incidents={incidents}
+            technicians={technicians}
+            rooms={rooms}
+            equipment={equipment}
+            timetable={timetable}
+            analytics={analytics}
+            onSelectIncident={setSelectedIncident}
+            onRefresh={refreshAll}
+            onError={showError}
+            onSuccess={showSuccess}
+          />
+        )}
+
+        {/* Tab 4: WORK ORDERS (Technician & Admin) */}
         {activeTab === 'work_orders' && (
           isTechnician ? (
             <TechnicianPortal
               currentUser={currentUser}
               incidents={incidents}
               technicians={technicians}
+              onSelectIncident={setSelectedIncident}
               onRefresh={refreshAll}
               onError={showError}
               onSuccess={showSuccess}
@@ -359,40 +348,38 @@ export function App() {
           )
         )}
 
-        {/* Tab 4: RESOURCES & TIMETABLE */}
-        {activeTab === 'resources' && (
-          <ResourcesView
+        {/* Tab 5: CAMPUS RESOURCES & TIMETABLE (Admin) */}
+        {(activeTab === 'resources' || activeTab === 'timetable') && isAdmin && (
+          <AdminConsole
+            currentUser={currentUser}
+            incidents={incidents}
+            technicians={technicians}
             rooms={rooms}
             equipment={equipment}
             timetable={timetable}
+            analytics={analytics}
+            onSelectIncident={setSelectedIncident}
+            onRefresh={refreshAll}
+            onError={showError}
+            onSuccess={showSuccess}
           />
         )}
 
-        {/* Tab 5: AGENT RUNS */}
+        {/* Tab 6: AGENT TELEMETRY (Admin) */}
         {activeTab === 'agent_runs' && isAdmin && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            <div>
-              <h1 style={{ fontSize: '1.65rem', marginBottom: '0.25rem', color: 'var(--text-main)' }}>
-                Agent Execution Runs & Telemetry
-              </h1>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>
-                Multi-agent telemetry, replanning correlation, and real-time execution histories.
-              </p>
-            </div>
-
-            <AdminConsole
-              currentUser={currentUser}
-              incidents={incidents}
-              technicians={technicians}
-              rooms={rooms}
-              equipment={equipment}
-              timetable={timetable}
-              analytics={analytics}
-              onRefresh={refreshAll}
-              onError={showError}
-              onSuccess={showSuccess}
-            />
-          </div>
+          <AdminConsole
+            currentUser={currentUser}
+            incidents={incidents}
+            technicians={technicians}
+            rooms={rooms}
+            equipment={equipment}
+            timetable={timetable}
+            analytics={analytics}
+            onSelectIncident={setSelectedIncident}
+            onRefresh={refreshAll}
+            onError={showError}
+            onSuccess={showSuccess}
+          />
         )}
 
       </main>
@@ -409,7 +396,7 @@ export function App() {
         />
       )}
 
-      {/* Consistent Footer */}
+      {/* Footer */}
       <Footer
         onNavigate={setActiveTab}
         onSignIn={() => {}}

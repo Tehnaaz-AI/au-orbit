@@ -1,17 +1,16 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import { Role, User } from '../types';
 import { 
   LogOut, 
   Activity, 
   Zap,
   LayoutDashboard,
-  AlertCircle,
+  ClipboardList,
   Wrench,
   Calendar,
   Layers,
-  ArrowRight,
-  ShieldCheck
+  PlusCircle,
+  Building2
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -28,7 +27,6 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({
   currentUser,
-  currentRole,
   activeTab = 'dashboard',
   onSelectTab,
   onLogout,
@@ -49,10 +47,10 @@ export const Navbar: React.FC<NavbarProps> = ({
     }, 50);
   };
 
-  // Public Navbar
+  // 1. Public Visitor Navbar
   if (!currentUser) {
     return (
-      <header className="navbar" style={{ backdropFilter: 'blur(12px)', background: 'rgba(251, 249, 243, 0.92)' }}>
+      <header className="navbar">
         <a 
           href="/" 
           className="navbar-brand" 
@@ -62,11 +60,11 @@ export const Navbar: React.FC<NavbarProps> = ({
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
         >
-          <motion.div whileHover={{ rotate: 5, scale: 1.05 }} className="navbar-brand-mark">AU</motion.div>
+          <div className="navbar-brand-mark">AU</div>
           <span>AUOrbit</span>
         </a>
 
-        <nav>
+        <nav aria-label="Main Navigation">
           <ul className="nav-links">
             <li>
               <button 
@@ -107,33 +105,27 @@ export const Navbar: React.FC<NavbarProps> = ({
           </ul>
         </nav>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <motion.button 
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+          <button 
             type="button"
             className="btn btn-secondary btn-sm" 
-            whileHover={{ scale: 1.04, y: -1 }}
-            whileTap={{ scale: 0.96 }}
             onClick={onSignIn}
-            style={{ padding: '0.45rem 1rem' }}
           >
             Sign In
-          </motion.button>
-          <motion.button 
+          </button>
+          <button 
             type="button"
             className="btn btn-primary btn-sm" 
-            whileHover={{ scale: 1.04, y: -1, boxShadow: '0 6px 14px rgba(227, 83, 54, 0.25)' }}
-            whileTap={{ scale: 0.96 }}
             onClick={onGetStarted}
-            style={{ padding: '0.45rem 1rem' }}
           >
-            Get Started <ArrowRight size={14} />
-          </motion.button>
+            Get Started
+          </button>
         </div>
       </header>
     );
   }
 
-  // Authenticated Navbar
+  // 2. Authenticated Role-Specific Navbar
   const roleDisplayNames: Record<Role, string> = {
     STUDENT: 'Student',
     FACULTY: 'Faculty Member',
@@ -150,7 +142,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <header className="navbar">
-      {/* Brand */}
+      {/* Brand & Role-Specific Navigation Tabs */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
         <a 
           href="/" 
@@ -164,105 +156,143 @@ export const Navbar: React.FC<NavbarProps> = ({
           <span>AUOrbit</span>
         </a>
 
-        {/* Role-Specific Navigation Tabs */}
-        <nav>
+        <nav aria-label="Role Navigation">
           <ul className="nav-links">
+            {/* Overview / Dashboard (All Roles) */}
             <li>
               <button 
                 type="button"
                 className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
                 onClick={() => onSelectTab && onSelectTab('dashboard')}
               >
-                <LayoutDashboard size={15} /> Dashboard
+                <LayoutDashboard size={14} /> Overview
               </button>
             </li>
 
-            {/* Incidents Tab for Student, Faculty, Admin */}
-            {(isStudent || isFaculty || isAdmin) && (
+            {/* Student & Faculty: My Issues */}
+            {(isStudent || isFaculty) && (
               <li>
                 <button 
                   type="button"
-                  className={`nav-item ${activeTab === 'incidents' ? 'active' : ''}`}
-                  onClick={() => onSelectTab && onSelectTab('incidents')}
+                  className={`nav-item ${activeTab === 'my_issues' ? 'active' : ''}`}
+                  onClick={() => onSelectTab && onSelectTab('my_issues')}
                 >
-                  <AlertCircle size={15} /> {isStudent ? 'My Incidents' : isFaculty ? 'Department Incidents' : 'Incidents'}
+                  <ClipboardList size={14} /> {isStudent ? 'My Issues' : 'Classroom & Dept Issues'}
                 </button>
               </li>
             )}
 
-            {/* Work Orders / Queue Tab for Technician & Admin */}
-            {(isTechnician || isAdmin) && (
+            {/* Student & Faculty: Report Issue */}
+            {(isStudent || isFaculty) && (
+              <li>
+                <button 
+                  type="button"
+                  className={`nav-item ${activeTab === 'report_issue' ? 'active' : ''}`}
+                  onClick={() => onSelectTab && onSelectTab('report_issue')}
+                >
+                  <PlusCircle size={14} /> Report Issue
+                </button>
+              </li>
+            )}
+
+            {/* Technician: Assigned Work */}
+            {isTechnician && (
               <li>
                 <button 
                   type="button"
                   className={`nav-item ${activeTab === 'work_orders' ? 'active' : ''}`}
                   onClick={() => onSelectTab && onSelectTab('work_orders')}
                 >
-                  <Wrench size={15} /> {isTechnician ? 'My Work Orders' : 'Work Orders'}
+                  <Wrench size={14} /> Assigned Work
                 </button>
               </li>
             )}
 
-            {/* Campus Resources & Reference Timetable for Faculty & Admin */}
-            {(isFaculty || isAdmin) && (
-              <li>
-                <button 
-                  type="button"
-                  className={`nav-item ${activeTab === 'resources' ? 'active' : ''}`}
-                  onClick={() => onSelectTab && onSelectTab('resources')}
-                >
-                  <Calendar size={15} /> Resources & Timetable
-                </button>
-              </li>
-            )}
-
-            {/* Agent Runs & Governance for Admin */}
+            {/* Admin / Super Admin: Full Operational Navigation */}
             {isAdmin && (
-              <li>
-                <button 
-                  type="button"
-                  className={`nav-item ${activeTab === 'agent_runs' ? 'active' : ''}`}
-                  onClick={() => onSelectTab && onSelectTab('agent_runs')}
-                >
-                  <Layers size={15} /> Agent Runs
-                </button>
-              </li>
+              <>
+                <li>
+                  <button 
+                    type="button"
+                    className={`nav-item ${activeTab === 'incidents' ? 'active' : ''}`}
+                    onClick={() => onSelectTab && onSelectTab('incidents')}
+                  >
+                    <ClipboardList size={14} /> Incidents
+                  </button>
+                </li>
+                <li>
+                  <button 
+                    type="button"
+                    className={`nav-item ${activeTab === 'work_orders' ? 'active' : ''}`}
+                    onClick={() => onSelectTab && onSelectTab('work_orders')}
+                  >
+                    <Wrench size={14} /> Work Orders
+                  </button>
+                </li>
+                <li>
+                  <button 
+                    type="button"
+                    className={`nav-item ${activeTab === 'resources' ? 'active' : ''}`}
+                    onClick={() => onSelectTab && onSelectTab('resources')}
+                  >
+                    <Building2 size={14} /> Campus Resources
+                  </button>
+                </li>
+                <li>
+                  <button 
+                    type="button"
+                    className={`nav-item ${activeTab === 'timetable' ? 'active' : ''}`}
+                    onClick={() => onSelectTab && onSelectTab('timetable')}
+                  >
+                    <Calendar size={14} /> Reference Timetable
+                  </button>
+                </li>
+                <li>
+                  <button 
+                    type="button"
+                    className={`nav-item ${activeTab === 'agent_runs' ? 'active' : ''}`}
+                    onClick={() => onSelectTab && onSelectTab('agent_runs')}
+                  >
+                    <Layers size={14} /> Agent Telemetry
+                  </button>
+                </li>
+              </>
             )}
           </ul>
         </nav>
       </div>
 
       {/* Right Controls & User Profile */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
         
         {/* Live Operational Counters */}
         {emergencyCount > 0 && (
-          <span className="badge badge-emergency" style={{ fontSize: '0.72rem' }}>
-            <Zap size={12} /> {emergencyCount} Emergency
+          <span className="badge badge-emergency">
+            <Zap size={11} /> {emergencyCount} Emergency
           </span>
         )}
-        <span className="badge badge-neutral" style={{ fontSize: '0.72rem' }}>
-          <Activity size={12} color="var(--color-primary)" /> {activeIncidentsCount} Active
+        <span className="badge badge-neutral">
+          <Activity size={11} color="var(--color-primary)" /> {activeIncidentsCount} Active
         </span>
 
         {/* User Profile Badge */}
         <div style={{ 
           display: 'flex', 
           alignItems: 'center', 
-          gap: '0.65rem',
-          padding: '0.35rem 0.75rem',
+          gap: '0.55rem',
+          padding: '0.3rem 0.65rem',
           background: 'var(--bg-surface)',
           border: '1px solid var(--border-subtle)',
           borderRadius: 'var(--radius-sm)'
         }}>
           <div style={{ 
-            width: 26, 
-            height: 26, 
+            width: 24, 
+            height: 24, 
             borderRadius: '50%', 
             background: 'var(--color-primary)', 
             color: '#FFFFFF',
             fontWeight: 800,
-            fontSize: '0.75rem',
+            fontSize: '0.72rem',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center'
@@ -270,11 +300,11 @@ export const Navbar: React.FC<NavbarProps> = ({
             {currentUser.full_name ? currentUser.full_name.charAt(0).toUpperCase() : 'U'}
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15 }}>
-            <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)' }}>
               {currentUser.full_name}
             </span>
-            <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+            <span style={{ fontSize: '0.66rem', color: 'var(--text-muted)' }}>
               {roleDisplayNames[currentUser.role] || currentUser.role}
             </span>
           </div>
@@ -284,9 +314,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="btn-ghost btn-sm"
             onClick={onLogout}
             title="Sign Out"
-            style={{ padding: '0.2rem', color: 'var(--status-error-text)', marginLeft: '0.25rem' }}
+            style={{ padding: '0.15rem 0.35rem', color: 'var(--status-error-text)' }}
           >
-            <LogOut size={14} />
+            <LogOut size={13} />
           </button>
         </div>
 

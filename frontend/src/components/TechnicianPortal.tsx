@@ -1,48 +1,33 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Incident, Technician, User } from '../types';
 import { api } from '../api';
-import { AgentExecutionTracker } from './AgentExecutionTracker';
 import { 
   Wrench, 
   Play, 
-  CheckCircle2, 
+  CheckCircle, 
   RotateCcw, 
   MapPin, 
   Radio, 
-  Inbox
+  Inbox,
+  Clock,
+  ClipboardList
 } from 'lucide-react';
 
 interface TechnicianPortalProps {
   currentUser: User;
   incidents: Incident[];
   technicians: Technician[];
+  onSelectIncident?: (incident: Incident) => void;
   onRefresh: () => void;
   onError: (msg: string) => void;
   onSuccess: (msg: string) => void;
 }
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.08 }
-  }
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 12 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.35, ease: "easeOut" as const }
-  }
-};
-
 export const TechnicianPortal: React.FC<TechnicianPortalProps> = ({
   currentUser,
   incidents,
   technicians,
+  onSelectIncident,
   onRefresh,
   onError,
   onSuccess
@@ -67,7 +52,7 @@ export const TechnicianPortal: React.FC<TechnicianPortalProps> = ({
     setActingWorkId(workId);
     try {
       await api.workOrderAction(workId, 'start', { technician_id: activeTech?.id });
-      onSuccess(`Work order #${workId} marked in-progress!`);
+      onSuccess(`Work order #${workId} marked in-progress.`);
       onRefresh();
     } catch (err: any) {
       onError(err.message || 'Failed to start job');
@@ -83,7 +68,7 @@ export const TechnicianPortal: React.FC<TechnicianPortalProps> = ({
         notes: completionNotes || 'Diagnostics completed and operational function restored.',
         technician_id: activeTech?.id
       });
-      onSuccess(`Work order #${workId} completed and awaiting verification!`);
+      onSuccess(`Work order #${workId} completed. Status transitioned to Awaiting Verification.`);
       setShowCompleteModal(null);
       setCompletionNotes('');
       onRefresh();
@@ -123,67 +108,55 @@ export const TechnicianPortal: React.FC<TechnicianPortalProps> = ({
   }
 
   return (
-    <motion.div 
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}
-    >
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       
       {/* Technician Status Header */}
-      <motion.div 
-        variants={itemVariants}
-        className="card card-interactive" 
-        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}
-      >
+      <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <div style={{ 
-            width: 38, height: 38, borderRadius: 'var(--radius-sm)', background: 'var(--color-primary-subtle)', 
+            width: 36, height: 36, borderRadius: 'var(--radius-sm)', background: 'var(--color-primary-subtle)', 
             display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-primary)' 
           }}>
             <Wrench size={18} />
           </div>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+              <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-main)' }}>
                 {currentUser.full_name}
               </span>
               <span className={`badge ${activeTech?.status === 'AVAILABLE' ? 'badge-success' : 'badge-warning'}`}>
                 {activeTech?.status || 'AVAILABLE'}
               </span>
             </div>
-            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+            <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
               Specialty: <b>{currentUser.specialty || activeTech?.specialty || 'AV_ELECTRICAL'}</b> · {currentUser.department || 'Facilities Maintenance'}
             </div>
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <motion.button 
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
+        <div style={{ display: 'flex', gap: '0.45rem' }}>
+          <button 
             type="button" 
             className={`btn btn-sm ${activeTech?.status === 'AVAILABLE' ? 'btn-secondary' : 'btn-success'}`}
             onClick={toggleTechStatus}
           >
-            <Radio size={13} /> {activeTech?.status === 'AVAILABLE' ? 'Set Status: Busy' : 'Set Status: Available'}
-          </motion.button>
-          <motion.button 
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
+            <Radio size={12} /> {activeTech?.status === 'AVAILABLE' ? 'Set Busy' : 'Set Available'}
+          </button>
+          <button 
             type="button" 
             className="btn btn-secondary btn-sm" 
             onClick={onRefresh}
           >
-            <RotateCcw size={13} /> Refresh
-          </motion.button>
+            <RotateCcw size={12} /> Refresh
+          </button>
         </div>
-      </motion.div>
+      </div>
 
       {/* Assigned Tasks Feed */}
-      <motion.div variants={itemVariants} className="card card-interactive">
+      <div className="card">
         <div className="card-header">
           <span className="card-title">
+            <ClipboardList size={16} color="var(--color-primary)" />
             Assigned Work Orders ({myWorkOrders.length})
           </span>
           <span className="badge badge-role">Specialist Queue</span>
@@ -192,129 +165,121 @@ export const TechnicianPortal: React.FC<TechnicianPortalProps> = ({
         {myWorkOrders.length === 0 ? (
           <div className="empty-state" style={{ padding: '2.5rem 1rem', border: 'none' }}>
             <div className="empty-state-icon">
-              <Inbox size={24} />
+              <Inbox size={22} />
             </div>
-            <div className="empty-state-title">No work orders assigned</div>
+            <div className="empty-state-title">No work assigned</div>
             <div className="empty-state-text">
-              When classroom maintenance issues match your specialty and availability, work orders will appear here automatically.
+              When classroom maintenance issues match your specialty and availability, work orders will appear here.
             </div>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <AnimatePresence>
-              {myWorkOrders.map(inc => {
-                const wo = inc.work_order;
-                if (!wo) return null;
-                const isStarted = wo.status === 'IN_PROGRESS';
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+            {myWorkOrders.map(inc => {
+              const wo = inc.work_order;
+              if (!wo) return null;
+              const isStarted = wo.status === 'IN_PROGRESS';
 
-                return (
-                  <motion.div 
-                    key={inc.id}
-                    layout
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.96 }}
-                    style={{
-                      background: isStarted ? 'var(--color-primary-subtle)' : 'var(--bg-surface)',
-                      border: '1px solid',
-                      borderColor: isStarted ? 'var(--color-primary)' : 'var(--border-subtle)',
-                      borderRadius: 'var(--radius-sm)',
-                      padding: '1rem'
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-                          <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-main)' }}>
-                            Work Order #{wo.id} (Incident #{inc.id})
-                          </span>
-                          <span className="badge badge-neutral">{inc.priority}</span>
-                          <span className={`badge ${wo.status === 'COMPLETED' ? 'badge-success' : 'badge-info'}`}>{wo.status}</span>
-                        </div>
-                        
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--color-primary-dark)', fontSize: '0.85rem', fontWeight: 600 }}>
-                          <MapPin size={13} /> {inc.room_code || 'General Space'}
-                        </div>
-                        
-                        <p style={{ fontSize: '0.82rem', color: 'var(--text-body)', margin: '0.25rem 0 0' }}>
-                          {inc.description}
-                        </p>
+              return (
+                <div 
+                  key={inc.id}
+                  style={{
+                    background: isStarted ? 'var(--color-primary-subtle)' : 'var(--bg-surface)',
+                    border: '1px solid',
+                    borderColor: isStarted ? 'var(--color-primary)' : 'var(--border-subtle)',
+                    borderRadius: 'var(--radius-sm)',
+                    padding: '1rem'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.2rem' }}>
+                        <span style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text-main)' }}>
+                          Work Order #{wo.id} (Incident #{inc.id})
+                        </span>
+                        <span className="badge badge-neutral">{inc.priority}</span>
+                        <span className={`badge ${wo.status === 'COMPLETED' ? 'badge-success' : 'badge-info'}`}>{wo.status}</span>
                       </div>
-
-                      <div style={{ display: 'flex', gap: '0.45rem' }}>
-                        {wo.status !== 'IN_PROGRESS' && wo.status !== 'COMPLETED' && (
-                          <>
-                            <motion.button 
-                              whileHover={{ scale: 1.04 }}
-                              whileTap={{ scale: 0.96 }}
-                              type="button"
-                              className="btn btn-primary btn-sm"
-                              disabled={actingWorkId === wo.id}
-                              onClick={() => handleStartWork(wo.id)}
-                            >
-                              <Play size={13} /> Start Job
-                            </motion.button>
-                            <motion.button 
-                              whileHover={{ scale: 1.04 }}
-                              whileTap={{ scale: 0.96 }}
-                              type="button"
-                              className="btn btn-danger btn-sm"
-                              disabled={actingWorkId === wo.id}
-                              onClick={() => handleRejectWork(wo.id)}
-                              title="Decline assignment and trigger autonomous replan"
-                            >
-                              <RotateCcw size={13} /> Decline
-                            </motion.button>
-                          </>
-                        )}
-
-                        {wo.status === 'IN_PROGRESS' && (
-                          <motion.button 
-                            whileHover={{ scale: 1.04 }}
-                            whileTap={{ scale: 0.96 }}
-                            type="button"
-                            className="btn btn-success btn-sm"
-                            disabled={actingWorkId === wo.id}
-                            onClick={() => setShowCompleteModal(wo.id)}
-                          >
-                            <CheckCircle2 size={13} /> Complete & Restore
-                          </motion.button>
-                        )}
+                      
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--color-primary-dark)', fontSize: '0.82rem', fontWeight: 600 }}>
+                        <MapPin size={12} /> {inc.room_code || 'General Space'}
                       </div>
+                      
+                      <p style={{ fontSize: '0.82rem', color: 'var(--text-body)', margin: '0.25rem 0 0' }}>
+                        {inc.description}
+                      </p>
                     </div>
 
-                    {showCompleteModal === wo.id && (
-                      <motion.div 
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        style={{ marginBottom: '0.75rem', padding: '0.75rem', background: '#FFFFFF', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-sm)' }}
-                      >
-                        <label className="form-label" style={{ fontSize: '0.75rem' }}>Repair & Restoration Notes</label>
-                        <input
-                          type="text"
-                          className="form-input"
-                          value={completionNotes}
-                          onChange={e => setCompletionNotes(e.target.value)}
-                          placeholder="e.g. Replaced projector lamp, verified HDMI signal"
-                          style={{ marginBottom: '0.5rem', fontSize: '0.82rem' }}
-                        />
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.35rem' }}>
-                          <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowCompleteModal(null)}>Cancel</button>
-                          <button type="button" className="btn btn-success btn-sm" onClick={() => handleCompleteWork(wo.id)}>Submit & Complete</button>
-                        </div>
-                      </motion.div>
-                    )}
+                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                      {wo.status !== 'IN_PROGRESS' && wo.status !== 'COMPLETED' && (
+                        <>
+                          <button 
+                            type="button"
+                            className="btn btn-primary btn-sm"
+                            disabled={actingWorkId === wo.id}
+                            onClick={() => handleStartWork(wo.id)}
+                          >
+                            <Play size={12} /> Start Job
+                          </button>
+                          <button 
+                            type="button"
+                            className="btn btn-danger btn-sm"
+                            disabled={actingWorkId === wo.id}
+                            onClick={() => handleRejectWork(wo.id)}
+                            title="Decline assignment and trigger autonomous replan"
+                          >
+                            <RotateCcw size={12} /> Decline
+                          </button>
+                        </>
+                      )}
 
-                    <AgentExecutionTracker incident={inc} compact={true} />
-                  </motion.div>
-                );
-              })}
-            </AnimatePresence>
+                      {wo.status === 'IN_PROGRESS' && (
+                        <button 
+                          type="button"
+                          className="btn btn-success btn-sm"
+                          disabled={actingWorkId === wo.id}
+                          onClick={() => setShowCompleteModal(wo.id)}
+                        >
+                          <CheckCircle size={12} /> Complete & Request Verification
+                        </button>
+                      )}
+
+                      {onSelectIncident && (
+                        <button 
+                          type="button" 
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => onSelectIncident(inc)}
+                        >
+                          Details
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {showCompleteModal === wo.id && (
+                    <div style={{ marginTop: '0.75rem', padding: '0.75rem', background: '#FFFFFF', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-sm)' }}>
+                      <label className="form-label" htmlFor="tech-notes" style={{ fontSize: '0.76rem' }}>Restoration & Calibration Notes</label>
+                      <input
+                        id="tech-notes"
+                        type="text"
+                        className="form-input"
+                        value={completionNotes}
+                        onChange={e => setCompletionNotes(e.target.value)}
+                        placeholder="e.g., Replaced lamp, tested HDMI input at 1080p resolution."
+                        style={{ marginBottom: '0.5rem', fontSize: '0.82rem' }}
+                      />
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.35rem' }}>
+                        <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowCompleteModal(null)}>Cancel</button>
+                        <button type="button" className="btn btn-success btn-sm" onClick={() => handleCompleteWork(wo.id)}>Submit & Complete</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
-      </motion.div>
+      </div>
 
-    </motion.div>
+    </div>
   );
 };

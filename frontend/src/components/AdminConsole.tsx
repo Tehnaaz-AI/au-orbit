@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Incident, Technician, Room, Equipment, TimetableItem, AnalyticsMetrics, User } from '../types';
 import { AgentExecutionTracker } from './AgentExecutionTracker';
 import { 
-  Activity, 
+  ClipboardList, 
   Building2, 
   Users, 
   Calendar, 
   RotateCcw, 
   Inbox,
-  ShieldAlert
+  Shield,
+  Layers,
+  Search,
+  MapPin,
+  Clock
 } from 'lucide-react';
 
 interface AdminConsoleProps {
@@ -20,27 +23,11 @@ interface AdminConsoleProps {
   equipment: Equipment[];
   timetable: TimetableItem[];
   analytics: AnalyticsMetrics | null;
+  onSelectIncident?: (incident: Incident) => void;
   onRefresh: () => void;
   onError: (msg: string) => void;
   onSuccess: (msg: string) => void;
 }
-
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.08 }
-  }
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 12 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.35, ease: "easeOut" as const }
-  }
-};
 
 export const AdminConsole: React.FC<AdminConsoleProps> = ({
   currentUser,
@@ -50,11 +37,12 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
   equipment,
   timetable,
   analytics,
+  onSelectIncident,
   onRefresh,
   onError,
   onSuccess
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'stream' | 'spaces' | 'technicians' | 'timetable'>('stream');
+  const [activeSubTab, setActiveSubTab] = useState<'stream' | 'spaces' | 'technicians' | 'timetable' | 'telemetry'>('stream');
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [filterPriority, setFilterPriority] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -98,102 +86,84 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
   };
 
   return (
-    <motion.div 
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}
-    >
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       
       {/* Header */}
-      <motion.div 
-        variants={itemVariants}
-        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}
-      >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-            <h1 style={{ fontSize: '1.65rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <ShieldAlert size={24} color="var(--color-primary)" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.2rem' }}>
+            <h1 style={{ fontSize: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.45rem', color: 'var(--text-main)' }}>
+              <Shield size={20} color="var(--color-primary)" />
               University Operations Console
             </h1>
             <span className="badge badge-role">Administrator</span>
           </div>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>
             Campus governance, multi-agent dispatch oversight, specialist fleet, and facilities inventory.
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          <motion.button 
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
+        <div style={{ display: 'flex', gap: '0.45rem', alignItems: 'center' }}>
+          <button 
             type="button" 
             className="btn btn-secondary btn-sm" 
             onClick={onRefresh}
           >
-            <RotateCcw size={13} /> Refresh Fleet
-          </motion.button>
+            <RotateCcw size={12} /> Refresh Data
+          </button>
         </div>
-      </motion.div>
+      </div>
 
       {/* Sub-Navigation Tabs */}
-      <motion.div 
-        variants={itemVariants}
-        style={{ display: 'flex', gap: '0.35rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.5rem', flexWrap: 'wrap' }}
-      >
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
+      <div className="tab-bar">
+        <button
           type="button"
-          className={`btn btn-sm ${activeSubTab === 'stream' ? 'btn-primary' : 'btn-ghost'}`}
+          className={`tab-btn ${activeSubTab === 'stream' ? 'active' : ''}`}
           onClick={() => setActiveSubTab('stream')}
         >
-          <Activity size={14} /> Incidents Stream ({incidents.length})
-        </motion.button>
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
+          <ClipboardList size={13} /> Incident Stream ({incidents.length})
+        </button>
+        <button
           type="button"
-          className={`btn btn-sm ${activeSubTab === 'spaces' ? 'btn-primary' : 'btn-ghost'}`}
+          className={`tab-btn ${activeSubTab === 'spaces' ? 'active' : ''}`}
           onClick={() => setActiveSubTab('spaces')}
         >
-          <Building2 size={14} /> Campus Spaces ({rooms.length})
-        </motion.button>
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
+          <Building2 size={13} /> Campus Spaces ({rooms.length})
+        </button>
+        <button
           type="button"
-          className={`btn btn-sm ${activeSubTab === 'technicians' ? 'btn-primary' : 'btn-ghost'}`}
+          className={`tab-btn ${activeSubTab === 'technicians' ? 'active' : ''}`}
           onClick={() => setActiveSubTab('technicians')}
         >
-          <Users size={14} /> Specialists ({technicians.length})
-        </motion.button>
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
+          <Users size={13} /> Specialists ({technicians.length})
+        </button>
+        <button
           type="button"
-          className={`btn btn-sm ${activeSubTab === 'timetable' ? 'btn-primary' : 'btn-ghost'}`}
+          className={`tab-btn ${activeSubTab === 'timetable' ? 'active' : ''}`}
           onClick={() => setActiveSubTab('timetable')}
         >
-          <Calendar size={14} /> Reference Timetable ({timetable.length})
-        </motion.button>
-      </motion.div>
-
-      {/* SUB-TAB: INCIDENTS STREAM */}
-      {activeSubTab === 'stream' && (
-        <motion.div 
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -8 }}
-          style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
+          <Calendar size={13} /> Reference Timetable ({timetable.length})
+        </button>
+        <button
+          type="button"
+          className={`tab-btn ${activeSubTab === 'telemetry' ? 'active' : ''}`}
+          onClick={() => setActiveSubTab('telemetry')}
         >
+          <Layers size={13} /> Agent Telemetry
+        </button>
+      </div>
+
+      {/* SUB-TAB 1: INCIDENTS STREAM */}
+      {activeSubTab === 'stream' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           
           {/* Filter Bar */}
-          <div className="card card-interactive" style={{ padding: '0.85rem' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
+          <div className="card" style={{ padding: '0.85rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem' }}>
               <div>
-                <label className="form-label">Filter Status</label>
+                <label className="form-label" htmlFor="admin-filter-status">Filter Status</label>
                 <select 
+                  id="admin-filter-status"
                   className="form-select" 
                   value={filterStatus} 
                   onChange={e => setFilterStatus(e.target.value)}
@@ -210,8 +180,9 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
               </div>
 
               <div>
-                <label className="form-label">Filter Priority</label>
+                <label className="form-label" htmlFor="admin-filter-priority">Filter Priority</label>
                 <select 
+                  id="admin-filter-priority"
                   className="form-select" 
                   value={filterPriority} 
                   onChange={e => setFilterPriority(e.target.value)}
@@ -225,11 +196,12 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
               </div>
 
               <div>
-                <label className="form-label">Search Query</label>
+                <label className="form-label" htmlFor="admin-search-q">Search Query</label>
                 <input
+                  id="admin-search-q"
                   type="text"
                   className="form-input"
-                  placeholder="Search description, room, reporter..."
+                  placeholder="Search description, space, reporter..."
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                 />
@@ -242,7 +214,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
             <div className="card">
               <div className="empty-state" style={{ border: 'none' }}>
                 <div className="empty-state-icon">
-                  <Inbox size={24} />
+                  <Inbox size={22} />
                 </div>
                 <div className="empty-state-title">No matching incidents found</div>
                 <div className="empty-state-text">
@@ -251,82 +223,67 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
               </div>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <AnimatePresence>
-                {filteredIncidents.map(inc => (
-                  <motion.div 
-                    key={inc.id} 
-                    layout
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.96 }}
-                    className="card card-interactive" 
-                    style={{ padding: '1rem' }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.65rem' }}>
-                      <div>
-                        <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-main)' }}>
-                          Incident #{inc.id} · {inc.room_code || 'General Space'}
-                        </span>
-                        <span style={{ fontSize: '0.85rem', color: 'var(--text-body)', marginLeft: '0.5rem' }}>
-                          {inc.description}
-                        </span>
-                      </div>
-
-                      <div style={{ display: 'flex', gap: '0.35rem' }}>
-                        <span className={`badge ${statusBadgeClass[inc.status] || 'badge-neutral'}`}>{inc.status}</span>
-                        <span className={`badge ${priorityBadgeClass[inc.priority] || 'badge-neutral'}`}>{inc.priority}</span>
-                        {inc.replan_count > 0 && (
-                          <span className="badge badge-replan">Replan #{inc.replan_count}</span>
-                        )}
-                      </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {filteredIncidents.map(inc => (
+                <div 
+                  key={inc.id} 
+                  className="card card-interactive" 
+                  style={{ padding: '0.9rem 1.15rem' }}
+                  onClick={() => onSelectIncident && onSelectIncident(inc)}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.45rem', marginBottom: '0.4rem' }}>
+                    <div>
+                      <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-main)' }}>
+                        Incident #{inc.id} · {inc.room_code || 'General Space'}
+                      </span>
+                      <span style={{ fontSize: '0.84rem', color: 'var(--text-body)', marginLeft: '0.45rem' }}>
+                        {inc.description}
+                      </span>
                     </div>
 
-                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.75rem', display: 'flex', gap: '1rem' }}>
-                      <span>Reporter: <b>{inc.reporter}</b></span>
-                      <span>Category: <b>{inc.category}</b></span>
-                      <span>Created: {new Date(inc.created_at).toLocaleString()}</span>
+                    <div style={{ display: 'flex', gap: '0.35rem' }}>
+                      <span className={`badge ${statusBadgeClass[inc.status] || 'badge-neutral'}`}>{inc.status}</span>
+                      <span className={`badge ${priorityBadgeClass[inc.priority] || 'badge-neutral'}`}>{inc.priority}</span>
+                      {inc.replan_count > 0 && (
+                        <span className="badge badge-replan">Replan #{inc.replan_count}</span>
+                      )}
                     </div>
+                  </div>
 
-                    <AgentExecutionTracker incident={inc} compact={true} />
-                  </motion.div>
-                ))}
-              </AnimatePresence>
+                  <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', display: 'flex', gap: '0.85rem' }}>
+                    <span>Reporter: <b>{inc.reporter}</b></span>
+                    <span>Category: <b>{inc.category}</b></span>
+                    <span>Created: {new Date(inc.created_at).toLocaleString()}</span>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 
-        </motion.div>
+        </div>
       )}
 
-      {/* SUB-TAB: SPACES & EQUIPMENT */}
+      {/* SUB-TAB 2: SPACES */}
       {activeSubTab === 'spaces' && (
-        <motion.div 
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -8 }}
-          style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
-        >
-          
-          <div className="card card-interactive" style={{ padding: '0.85rem' }}>
-            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)' }}>Filter Block:</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div className="card" style={{ padding: '0.75rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-main)' }}>Filter Block:</span>
               {['ALL', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'S'].map(b => (
-                <motion.button
+                <button
                   key={b}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
                   type="button"
                   className={`btn btn-sm ${selectedBlock === b ? 'btn-primary' : 'btn-secondary'}`}
-                  style={{ fontSize: '0.75rem', padding: '0.3rem 0.6rem' }}
+                  style={{ fontSize: '0.72rem', padding: '0.25rem 0.5rem' }}
                   onClick={() => setSelectedBlock(b)}
                 >
                   Block {b}
-                </motion.button>
+                </button>
               ))}
             </div>
           </div>
 
-          <div className="table-container card-interactive">
+          <div className="table-container">
             <table className="table">
               <thead>
                 <tr>
@@ -352,25 +309,19 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
               </tbody>
             </table>
           </div>
-
-        </motion.div>
+        </div>
       )}
 
-      {/* SUB-TAB: TECHNICIANS FLEET */}
+      {/* SUB-TAB 3: TECHNICIANS FLEET */}
       {activeSubTab === 'technicians' && (
-        <motion.div 
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -8 }}
-          className="table-container card-interactive"
-        >
+        <div className="table-container">
           <table className="table">
             <thead>
               <tr>
                 <th>Specialist Name</th>
                 <th>Maintenance Specialty</th>
                 <th>Current Status</th>
-                <th>Assigned Work</th>
+                <th>Active Assignments</th>
               </tr>
             </thead>
             <tbody>
@@ -392,46 +343,74 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
               })}
             </tbody>
           </table>
-        </motion.div>
+        </div>
       )}
 
-      {/* SUB-TAB: REFERENCE TIMETABLE */}
+      {/* SUB-TAB 4: REFERENCE TIMETABLE */}
       {activeSubTab === 'timetable' && (
-        <motion.div 
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -8 }}
-          className="table-container card-interactive"
-        >
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Day</th>
-                <th>Period</th>
-                <th>Room</th>
-                <th>Subject</th>
-                <th>Faculty</th>
-                <th>Section</th>
-                <th>Activity</th>
-              </tr>
-            </thead>
-            <tbody>
-              {timetable.slice(0, 40).map(t => (
-                <tr key={t.id}>
-                  <td><b>{t.day}</b></td>
-                  <td>Period {t.period} ({t.start_time} - {t.end_time})</td>
-                  <td><span className="badge badge-neutral mono">{t.room_code}</span></td>
-                  <td><b>{t.subject}</b></td>
-                  <td>{t.faculty}</td>
-                  <td>{t.section}</td>
-                  <td><span className="badge badge-neutral">{t.activity_type}</span></td>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.84rem', color: 'var(--text-muted)' }}>
+              Institutional Reference Timetable (Official Campus Academic Schedule)
+            </span>
+            <span className="badge badge-role">Reference Data</span>
+          </div>
+          <div className="table-container">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Day</th>
+                  <th>Period</th>
+                  <th>Room</th>
+                  <th>Subject</th>
+                  <th>Faculty</th>
+                  <th>Section</th>
+                  <th>Activity</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </motion.div>
+              </thead>
+              <tbody>
+                {timetable.slice(0, 40).map(t => (
+                  <tr key={t.id}>
+                    <td><b>{t.day}</b></td>
+                    <td>Period {t.period} ({t.start_time} - {t.end_time})</td>
+                    <td><span className="badge badge-neutral mono">{t.room_code}</span></td>
+                    <td><b>{t.subject}</b></td>
+                    <td>{t.faculty}</td>
+                    <td>{t.section}</td>
+                    <td><span className="badge badge-neutral">{t.activity_type}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
 
-    </motion.div>
+      {/* SUB-TAB 5: AGENT TELEMETRY */}
+      {activeSubTab === 'telemetry' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {incidents.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-state-icon"><Layers size={22} /></div>
+              <div className="empty-state-title">No active telemetry runs</div>
+              <div className="empty-state-text">Reported issues will stream real-time agent execution histories here.</div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              {incidents.slice(0, 5).map(inc => (
+                <div key={inc.id} className="card" style={{ padding: '1rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.92rem' }}>Incident #{inc.id} Telemetry · Space: {inc.room_code || 'Campus'}</span>
+                    <span className={`badge ${statusBadgeClass[inc.status] || 'badge-neutral'}`}>{inc.status}</span>
+                  </div>
+                  <AgentExecutionTracker incident={inc} compact={true} />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+    </div>
   );
 };

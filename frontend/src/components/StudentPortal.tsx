@@ -1,21 +1,23 @@
 import React, { useState } from 'react';
 import { Incident, Room, User } from '../types';
 import { api } from '../api';
-import { AgentExecutionTracker } from './AgentExecutionTracker';
 import { 
   Send, 
-  Sparkles, 
   RotateCcw,
   Inbox,
   MapPin,
   Clock,
-  ChevronRight
+  ClipboardList,
+  PlusCircle,
+  CheckCircle,
+  ArrowRight
 } from 'lucide-react';
 
 interface StudentPortalProps {
   currentUser: User;
   incidents: Incident[];
   rooms: Room[];
+  onSelectIncident?: (incident: Incident) => void;
   onRefresh: () => void;
   onError: (msg: string) => void;
   onSuccess: (msg: string) => void;
@@ -25,6 +27,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
   currentUser,
   incidents,
   rooms,
+  onSelectIncident,
   onRefresh,
   onError,
   onSuccess
@@ -32,7 +35,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
   const [description, setDescription] = useState('');
   const [roomCode, setRoomCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [latestReported, setLatestReported] = useState<Incident | null>(null);
+  const [submittedIncident, setSubmittedIncident] = useState<Incident | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -44,13 +47,13 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
         description: description.trim(),
         room_code: roomCode.trim() || undefined
       });
-      setLatestReported(created);
+      setSubmittedIncident(created);
       setDescription('');
       setRoomCode('');
-      onSuccess(`Incident #${created.id} submitted & processed autonomously!`);
+      onSuccess(`Issue reported.`);
       onRefresh();
     } catch (err: any) {
-      onError(err.message || 'Failed to submit incident');
+      onError(err.message || 'Failed to submit issue report');
     } finally {
       setSubmitting(false);
     }
@@ -58,20 +61,32 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
 
   const myIncidents = incidents.filter(i => 
     i.reporter.toLowerCase().includes(currentUser.full_name.toLowerCase()) ||
-    latestReported?.id === i.id
+    submittedIncident?.id === i.id
   );
+
+  const statusBadgeClass: Record<string, string> = {
+    RESOLVED: 'badge-success',
+    CLOSED: 'badge-success',
+    IN_PROGRESS: 'badge-info',
+    SCHEDULED: 'badge-info',
+    ASSIGNED: 'badge-info',
+    REPLANNING: 'badge-replan',
+    AWAITING_VERIFICATION: 'badge-warning',
+    REOPENED: 'badge-warning',
+    REPORTED: 'badge-neutral'
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div>
-          <h1 style={{ fontSize: '1.65rem', marginBottom: '0.25rem' }}>
-            Student Workspace
+          <h1 style={{ fontSize: '1.5rem', marginBottom: '0.2rem', color: 'var(--text-main)' }}>
+            Student Issue Hub
           </h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-            Report classroom or campus facility issues for immediate autonomous dispatch.
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>
+            Report classroom, lab, or campus facility issues for immediate resolution.
           </p>
         </div>
 
@@ -84,76 +99,98 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
         </button>
       </div>
 
-      {/* Incident Intake Form */}
+      {/* Report Issue Card */}
       <div className="card">
         <div className="card-header">
           <span className="card-title">
-            <Sparkles size={16} color="var(--color-primary)" />
-            Report a Campus Issue
+            <PlusCircle size={16} color="var(--color-primary)" />
+            Report an Issue
           </span>
-          <span className="badge badge-role">Autonomous Intake</span>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+        {submittedIncident ? (
+          <div style={{ 
+            padding: '1.25rem', 
+            background: 'var(--status-success-bg)', 
+            borderRadius: 'var(--radius-sm)',
+            border: '1px solid var(--status-success-border)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.75rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--status-success-text)', fontWeight: 700, fontSize: '0.9rem' }}>
+              <CheckCircle size={18} />
+              <span>Incident #{submittedIncident.id} reported</span>
+            </div>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-body)', margin: 0 }}>
+              AUOrbit is analyzing the problem and coordinating automated specialist dispatch.
+            </p>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              {onSelectIncident && (
+                <button 
+                  type="button" 
+                  className="btn btn-primary btn-sm"
+                  onClick={() => {
+                    onSelectIncident(submittedIncident);
+                    setSubmittedIncident(null);
+                  }}
+                >
+                  View Live Progress <ArrowRight size={13} />
+                </button>
+              )}
+              <button 
+                type="button" 
+                className="btn btn-secondary btn-sm"
+                onClick={() => setSubmittedIncident(null)}
+              >
+                Report Another
+              </button>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">Location / Room (Optional)</label>
+              <label className="form-label" htmlFor="student-desc">What's happening?</label>
+              <textarea
+                id="student-desc"
+                className="form-textarea"
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                placeholder='Describe the problem (e.g., "The projector in Room I-302 is flickering")'
+                required
+                rows={3}
+              />
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label" htmlFor="student-loc">Location / Room (Optional)</label>
               <input
+                id="student-loc"
                 type="text"
                 className="form-input"
                 value={roomCode}
                 onChange={e => setRoomCode(e.target.value)}
-                placeholder="e.g. I-302, D-101, APJ-HALL"
+                placeholder="e.g., I-302, D-101, APJ-HALL"
               />
             </div>
-            
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">Academic Department</label>
-              <input
-                type="text"
-                className="form-input"
-                value={currentUser.department || 'General Student'}
-                disabled
-                style={{ backgroundColor: 'var(--color-gray-surface)' }}
-              />
-            </div>
-          </div>
 
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label className="form-label">Problem Description</label>
-            <textarea
-              className="form-textarea"
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              placeholder="Describe the issue in plain English (e.g. The projector in Room I-302 is not turning on)."
-              required
-              rows={3}
-            />
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
             <button 
               type="submit" 
               className="btn btn-primary" 
               disabled={submitting || !description.trim()}
+              style={{ width: '100%' }}
             >
-              {submitting ? 'Submitting & Dispatching...' : 'Submit Issue'} <Send size={15} />
+              {submitting ? 'Submitting...' : 'Report Issue'} <Send size={14} />
             </button>
-          </div>
-        </form>
+          </form>
+        )}
       </div>
 
-      {/* Real-Time Tracker for Most Recent Reported Issue */}
-      {latestReported && (
-        <div>
-          <AgentExecutionTracker incident={latestReported} />
-        </div>
-      )}
-
-      {/* My Reported Incidents */}
+      {/* My Reported Issues Feed */}
       <div className="card">
         <div className="card-header">
           <span className="card-title">
+            <ClipboardList size={16} color="var(--color-primary-dark)" />
             My Reported Issues ({myIncidents.length})
           </span>
         </div>
@@ -161,43 +198,64 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
         {myIncidents.length === 0 ? (
           <div className="empty-state" style={{ padding: '2.5rem 1rem', border: 'none' }}>
             <div className="empty-state-icon">
-              <Inbox size={24} />
+              <Inbox size={22} />
             </div>
             <div className="empty-state-title">No issues reported yet</div>
             <div className="empty-state-text">
-              When you submit a campus problem above, real-time dispatch and execution tracking will appear here.
+              Issues you report for campus facilities or classrooms will appear here with real-time status.
             </div>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
             {myIncidents.map(inc => (
               <div 
                 key={inc.id}
+                className="card-interactive"
+                onClick={() => onSelectIncident && onSelectIncident(inc)}
                 style={{ 
-                  background: 'var(--color-gray-surface)', 
-                  border: '1px solid var(--border-subtle)', 
-                  borderRadius: 'var(--radius-sm)', 
-                  padding: '1rem' 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'space-between',
+                  padding: '0.75rem 0.85rem',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: 'var(--radius-sm)',
+                  gap: '0.75rem'
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                  <div>
-                    <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-main)' }}>
-                      #{inc.id} · {inc.room_code || 'Campus Space'}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.2rem' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-main)' }}>
+                      #{inc.id}
                     </span>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--text-body)', marginLeft: '0.5rem' }}>
-                      {inc.description}
+                    <span className={`badge ${statusBadgeClass[inc.status] || 'badge-neutral'}`}>
+                      {inc.status}
                     </span>
                   </div>
-                  <div style={{ display: 'flex', gap: '0.35rem' }}>
-                    <span className="badge badge-neutral">{inc.priority}</span>
-                    <span className={`badge ${inc.status === 'RESOLVED' ? 'badge-success' : 'badge-info'}`}>{inc.status}</span>
+
+                  <div style={{ fontSize: '0.82rem', color: 'var(--text-body)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {inc.description}
+                  </div>
+
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <MapPin size={11} /> {inc.room_code || 'Campus Space'}
+                    </span>
+                    <span>·</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <Clock size={11} /> {new Date(inc.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
                   </div>
                 </div>
 
-                <div style={{ marginTop: '0.75rem' }}>
-                  <AgentExecutionTracker incident={inc} compact={true} />
-                </div>
+                {onSelectIncident && (
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary btn-sm"
+                    style={{ flexShrink: 0 }}
+                  >
+                    View Issue
+                  </button>
+                )}
               </div>
             ))}
           </div>
