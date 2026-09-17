@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Incident, User } from '../types';
 import { AgentExecutionTracker } from './AgentExecutionTracker';
+import { MediaUploadZone } from './media/MediaUploadZone';
 import { 
   X, 
   MapPin, 
@@ -14,7 +15,11 @@ import {
   Layers,
   ShieldCheck,
   ClipboardList,
-  ArrowRight
+  ArrowRight,
+  Image as ImageIcon,
+  Video,
+  FileCheck2,
+  ExternalLink
 } from 'lucide-react';
 import { api } from '../api';
 
@@ -38,6 +43,7 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
   const [activeTab, setActiveTab] = useState<'overview' | 'work_order' | 'agent_activity' | 'verification'>('overview');
   const [loading, setLoading] = useState(false);
   const [workNotes, setWorkNotes] = useState('');
+  const [resolutionMedia, setResolutionMedia] = useState<string[]>([]);
 
   // Close on Escape key press
   useEffect(() => {
@@ -72,22 +78,28 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
   // RBAC permission checks based strictly on backend authority
   const isTechnician = currentUser.role === 'TECHNICIAN';
   const isFaculty = currentUser.role === 'FACULTY';
-  const isAdmin = ['ADMIN', 'UNIVERSITY_ADMIN', 'SUPER_ADMIN'].includes(currentUser.role);
+  const isOpsHead = currentUser.role === 'OPERATIONAL_HEAD';
+  const isAdmin = ['ADMIN', 'UNIVERSITY_ADMIN', 'SUPER_ADMIN', 'OPERATIONAL_HEAD'].includes(currentUser.role);
   const isAssignedTech = isTechnician && incident.work_order && (
     incident.work_order.technician_id === currentUser.id ||
     (incident.work_order.technician && incident.work_order.technician.toLowerCase().includes(currentUser.full_name.toLowerCase()))
   );
 
   const canExecuteWork = (isAssignedTech || isAdmin) && incident.work_order && ['ASSIGNED', 'SCHEDULED', 'IN_PROGRESS'].includes(incident.work_order.status);
-  const canVerify = (isFaculty || isAdmin || currentUser.role === 'STUDENT') && ['AWAITING_VERIFICATION', 'REOPENED'].includes(incident.status);
+  const canVerify = (isFaculty || isOpsHead || isAdmin || currentUser.role === 'STUDENT') && ['AWAITING_VERIFICATION', 'REOPENED'].includes(incident.status);
 
   async function handleWorkAction(action: string, outcome?: string) {
     if (!incident.work_order?.id) return;
     setLoading(true);
     try {
-      await api.workOrderAction(incident.work_order.id, action, { outcome, notes: workNotes || undefined });
+      await api.workOrderAction(incident.work_order.id, action, { 
+        outcome, 
+        notes: workNotes || undefined,
+        resolution_media: resolutionMedia.length > 0 ? resolutionMedia : undefined
+      });
       onSuccess(`Work order updated: ${action}`);
       setWorkNotes('');
+      setResolutionMedia([]);
       onRefresh();
     } catch (err: any) {
       onError(err.message || 'Action failed');
@@ -102,7 +114,7 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
     try {
       await api.workOrderAction(incident.work_order.id, 'verify', {
         outcome,
-        notes: outcome === 'pass' ? 'Verified operational function restored.' : 'Verification rejected: Issue persists.'
+        notes: outcome === 'pass' ? `Verified operational restoration by ${currentUser.full_name} (${currentUser.role}).` : 'Verification rejected: Operational defect persists.'
       });
       if (outcome === 'pass') {
         onSuccess('Resolution verified. Incident closed.');
@@ -118,6 +130,34 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
   }
 
   const workOrder = incident.work_order;
+  const initialMedia = incident.media_urls || [];
+  const proofMedia = workOrder?.resolution_media || [];
+
+  const renderMediaGrid = (urls: string[], label: string) => {
+    if (!urls || urls.length === 0) {
+      return (
+        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic', padding: '0.5rem 0' }}>
+          No visual attachments uploaded.
+        </div>
+      );
+    }
+    return (
+      <div className="media-preview-grid">
+        {urls.map((url, idx) => {
+          const isVideo = url.startsWith('data:video') || url.endsWith('.mp4') || url.endsWith('.webm');
+          return (
+            <div key={idx} className="media-preview-item" style={{ width: '130px', height: '95px' }}>
+              {isVideo ? (
+                <video src={url} controls style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <img src={url} alt={`${label} ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
 
   return (
     <motion.div 
@@ -136,14 +176,14 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
         transition={{ duration: 0.22, ease: "easeOut" }}
         className="modal-content" 
         onClick={e => e.stopPropagation()}
-        style={{ maxWidth: '820px' }}
+        style={{ maxWidth: '860px' }}
       >
         
         {/* Modal Sticky Header */}
         <div className="modal-header">
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-              <span style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--text-main)' }}>
+              <span style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--text-main)', fontFamily: 'var(--font-heading)' }}>
                 Incident #{incident.id}
               </span>
               <span className={`badge ${statusBadgeClass[incident.status] || 'badge-neutral'}`}>
@@ -209,7 +249,7 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
               className={`tab-btn ${activeTab === 'verification' ? 'active' : ''}`}
               onClick={() => setActiveTab('verification')}
             >
-              <ShieldCheck size={13} /> Verification
+              <ShieldCheck size={13} /> Verification & Proof
             </button>
           </div>
         </div>
@@ -231,6 +271,18 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
                   Reported by: <b>{incident.reporter}</b>
                 </div>
               </div>
+
+              {/* Problem Attachments (Photos/Videos) */}
+              {initialMedia.length > 0 && (
+                <div style={{ background: '#FFFFFF', padding: '1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.6rem' }}>
+                    <ImageIcon size={14} color="var(--primary-dark)" />
+                    <span className="stat-label" style={{ marginBottom: 0 }}>Reported Photo / Video Evidence</span>
+                    <span className="badge badge-neutral" style={{ fontSize: '0.7rem' }}>{initialMedia.length} attached</span>
+                  </div>
+                  {renderMediaGrid(initialMedia, 'Incident Attachment')}
+                </div>
+              )}
 
               {/* AI Understanding & Context Summary */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.85rem' }}>
@@ -298,6 +350,17 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
                     </div>
                   </div>
 
+                  {/* Existing Resolution Media */}
+                  {proofMedia.length > 0 && (
+                    <div style={{ background: '#FFFFFF', padding: '1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.6rem' }}>
+                        <FileCheck2 size={14} color="var(--status-success)" />
+                        <span className="stat-label" style={{ marginBottom: 0 }}>Technician Resolution Proof</span>
+                      </div>
+                      {renderMediaGrid(proofMedia, 'Technician Proof')}
+                    </div>
+                  )}
+
                   {/* Technician Execution Controls */}
                   {canExecuteWork && (
                     <div style={{ padding: '1rem', background: 'var(--bg-surface)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
@@ -325,22 +388,34 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
                       )}
 
                       {workOrder.status === 'IN_PROGRESS' && (
-                        <div style={{ marginTop: '0.5rem' }}>
-                          <label className="form-label" htmlFor="wo-notes">Restoration & Repair Notes</label>
-                          <input 
-                            id="wo-notes"
-                            type="text" 
-                            className="form-input" 
-                            value={workNotes}
-                            onChange={e => setWorkNotes(e.target.value)}
-                            placeholder="e.g. Replaced faulty HDMI controller and tested output."
-                            style={{ marginBottom: '0.5rem' }}
-                          />
+                        <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                          <div>
+                            <label className="form-label" htmlFor="wo-notes">Restoration & Repair Notes</label>
+                            <input 
+                              id="wo-notes"
+                              type="text" 
+                              className="form-input" 
+                              value={workNotes}
+                              onChange={e => setWorkNotes(e.target.value)}
+                              placeholder="e.g. Replaced faulty HDMI controller and tested output."
+                            />
+                          </div>
+
+                          <div>
+                            <label className="form-label">Upload Repair Proof (Photo / Video)</label>
+                            <MediaUploadZone 
+                              mediaUrls={resolutionMedia}
+                              onChange={setResolutionMedia}
+                              maxFiles={3}
+                            />
+                          </div>
+
                           <button 
                             type="button" 
                             className="btn btn-success btn-sm"
                             disabled={loading}
                             onClick={() => handleWorkAction('complete')}
+                            style={{ alignSelf: 'flex-start', marginTop: '0.25rem' }}
                           >
                             <CheckCircle size={13} /> Complete & Request Verification
                           </button>
@@ -383,11 +458,37 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
                 </p>
               </div>
 
+              {/* Side-by-Side Before vs After Visual Comparison */}
+              <div style={{ background: '#FFFFFF', padding: '1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+                <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-main)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Layers size={14} color="var(--primary-dark)" />
+                  <span>Visual Evidence Audit (Before vs. After)</span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  {/* Before */}
+                  <div style={{ background: 'var(--bg-surface)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--status-danger)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                      <AlertTriangle size={12} /> Initial Problem Evidence (Before)
+                    </div>
+                    {renderMediaGrid(initialMedia, 'Before Proof')}
+                  </div>
+
+                  {/* After */}
+                  <div style={{ background: 'var(--bg-surface)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--status-success)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                      <CheckCircle size={12} /> Technician Resolution Proof (After)
+                    </div>
+                    {renderMediaGrid(proofMedia, 'After Proof')}
+                  </div>
+                </div>
+              </div>
+
               {canVerify && (
                 <div style={{ padding: '1rem', background: '#FFFFFF', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-default)' }}>
                   <span className="stat-label">Resolution Audit Sign-Off</span>
                   <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
-                    Confirm whether the issue in <b>{incident.room_code || 'Space'}</b> is fully resolved.
+                    As an authorized auditor (<b>{currentUser.role}</b>), compare the evidence and confirm whether the issue in <b>{incident.room_code || 'Space'}</b> is fully resolved.
                   </p>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <button 

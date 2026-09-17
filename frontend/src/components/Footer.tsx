@@ -1,4 +1,5 @@
 import React from 'react';
+import { Shield, Info, Layers, Lock, Cpu, Sparkles, ExternalLink } from 'lucide-react';
 
 interface FooterProps {
   onNavigate?: (tab: string) => void;
@@ -21,117 +22,115 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onSignIn, onGetStart
 
   return (
     <footer style={{ 
-      backgroundColor: '#FFFFFF', 
-      borderTop: '1px solid var(--border-subtle)', 
-      padding: '3.5rem 1.5rem 2rem',
-      marginTop: 'auto'
+      background: 'linear-gradient(180deg, #241A16 0%, #150F0D 100%)', 
+      borderTop: '2px solid var(--color-primary)', 
+      padding: '3.5rem 1.75rem 2.25rem',
+      marginTop: 'auto',
+      color: '#E8DED8'
     }}>
-      <div style={{ maxWidth: '1080px', margin: '0 auto' }}>
+      <div style={{ maxWidth: '1120px', margin: '0 auto' }}>
         
         <div style={{ 
           display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', 
           gap: '2.5rem',
-          marginBottom: '3rem'
+          marginBottom: '2.75rem'
         }}>
           
           {/* Brand & Wordmark */}
-          <div style={{ maxWidth: '320px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.75rem' }}>
-              <div style={{ 
-                width: 30, height: 30, borderRadius: 8, background: 'var(--color-primary)', 
-                display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFFFFF', fontWeight: 800, fontSize: '0.85rem' 
-              }}>
-                AU
-              </div>
-              <span style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
-                AUOrbit
-              </span>
+          <div style={{ maxWidth: '340px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.85rem' }}>
+              <img src="/logo.png" alt="AUOrbit" style={{ height: 34, objectFit: 'contain', background: '#FFFFFF', padding: '3px 8px', borderRadius: '6px' }} />
             </div>
-            <p style={{ fontSize: '0.86rem', color: 'var(--text-muted)', lineHeight: 1.55 }}>
-              Autonomous University Operations coordinating multi-agent campus maintenance, timetable awareness, controlled specialist execution, and autonomous replanning.
+            <p style={{ fontSize: '0.86rem', color: '#BCA89E', lineHeight: 1.6 }}>
+              Autonomous University Operations coordinating multimodal campus maintenance, timetable awareness, controlled specialist execution, and self-healing replanning loops.
             </p>
           </div>
 
-          {/* Product Navigation */}
+          {/* Product & Platform */}
           <div>
-            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '1rem' }}>
-              Navigation
+            <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--color-primary-soft)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem', fontFamily: 'var(--font-heading)' }}>
+              Platform Navigation
             </div>
-            <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.65rem', fontSize: '0.86rem' }}>
+            <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.7rem', fontSize: '0.88rem' }}>
+              <li>
+                <button 
+                  type="button" 
+                  onClick={() => onNavigate && onNavigate('about')}
+                  style={{ background: 'none', border: 'none', color: '#FF9E6C', cursor: 'pointer', padding: 0, font: 'inherit', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                >
+                  <Info size={14} color="var(--color-primary-soft)" /> About AUOrbit System
+                </button>
+              </li>
               <li>
                 <button 
                   type="button" 
                   onClick={() => scrollToSection('how-it-works')}
-                  style={{ background: 'none', border: 'none', color: 'var(--text-body)', cursor: 'pointer', padding: 0, font: 'inherit' }}
+                  style={{ background: 'none', border: 'none', color: '#D4C5BD', cursor: 'pointer', padding: 0, font: 'inherit', transition: 'color 0.15s ease' }}
+                  onMouseOver={e => (e.currentTarget.style.color = '#FFFFFF')}
+                  onMouseOut={e => (e.currentTarget.style.color = '#D4C5BD')}
                 >
-                  How It Works
+                  How It Works (9-Stage Lifecycle)
                 </button>
               </li>
               <li>
                 <button 
                   type="button" 
                   onClick={() => scrollToSection('capabilities')}
-                  style={{ background: 'none', border: 'none', color: 'var(--text-body)', cursor: 'pointer', padding: 0, font: 'inherit' }}
+                  style={{ background: 'none', border: 'none', color: '#D4C5BD', cursor: 'pointer', padding: 0, font: 'inherit', transition: 'color 0.15s ease' }}
+                  onMouseOver={e => (e.currentTarget.style.color = '#FFFFFF')}
+                  onMouseOut={e => (e.currentTarget.style.color = '#D4C5BD')}
                 >
-                  Capabilities
-                </button>
-              </li>
-              <li>
-                <button 
-                  type="button" 
-                  onClick={() => scrollToSection('roles')}
-                  style={{ background: 'none', border: 'none', color: 'var(--text-body)', cursor: 'pointer', padding: 0, font: 'inherit' }}
-                >
-                  Role Workspaces
+                  Capabilities & Features
                 </button>
               </li>
               <li>
                 <button 
                   type="button" 
                   onClick={() => scrollToSection('architecture')}
-                  style={{ background: 'none', border: 'none', color: 'var(--text-body)', cursor: 'pointer', padding: 0, font: 'inherit' }}
+                  style={{ background: 'none', border: 'none', color: '#D4C5BD', cursor: 'pointer', padding: 0, font: 'inherit', transition: 'color 0.15s ease' }}
+                  onMouseOver={e => (e.currentTarget.style.color = '#FFFFFF')}
+                  onMouseOut={e => (e.currentTarget.style.color = '#D4C5BD')}
                 >
-                  System Architecture
+                  Self-Healing Architecture
                 </button>
               </li>
             </ul>
           </div>
 
-          {/* Autonomous Features */}
+          {/* Operational Engine */}
           <div>
-            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '1rem' }}>
+            <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--color-primary-soft)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem', fontFamily: 'var(--font-heading)' }}>
               Autonomous Core
             </div>
-            <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.65rem', fontSize: '0.86rem', color: 'var(--text-muted)' }}>
-              <li>Deterministic Agent Authority</li>
-              <li>Timetable Conflict Escalation</li>
-              <li>Specialist Capability Matching</li>
-              <li>Self-Healing Replanning Loop</li>
-              <li>PostgreSQL Authoritative History</li>
+            <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.7rem', fontSize: '0.85rem', color: '#BCA89E' }}>
+              <li style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}><Cpu size={13} color="var(--color-primary-soft)" /> Deterministic Agent State Machine</li>
+              <li style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}><Layers size={13} color="var(--color-primary-soft)" /> Timetable Conflict Escalation</li>
+              <li style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}><Shield size={13} color="var(--color-primary-soft)" /> Before/After Verification Audit</li>
+              <li style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}><Lock size={13} color="var(--color-primary-soft)" /> Role-Based Access Control (RBAC)</li>
             </ul>
           </div>
 
-          {/* Access & Account */}
+          {/* Direct Access */}
           <div>
-            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '1rem' }}>
+            <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--color-primary-soft)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem', fontFamily: 'var(--font-heading)' }}>
               Operational Access
             </div>
-            <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.65rem', fontSize: '0.86rem' }}>
+            <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.7rem', fontSize: '0.88rem' }}>
               <li>
                 <button 
                   type="button" 
                   onClick={onSignIn}
-                  style={{ background: 'none', border: 'none', color: 'var(--color-primary)', cursor: 'pointer', padding: 0, font: 'inherit', fontWeight: 600 }}
+                  style={{ background: 'none', border: 'none', color: '#FF8C42', cursor: 'pointer', padding: 0, font: 'inherit', fontWeight: 700 }}
                 >
-                  Sign In to AUOrbit
+                  Sign In to AUOrbit Portal →
                 </button>
               </li>
               <li>
                 <button 
                   type="button" 
                   onClick={onGetStarted}
-                  style={{ background: 'none', border: 'none', color: 'var(--text-body)', cursor: 'pointer', padding: 0, font: 'inherit' }}
+                  style={{ background: 'none', border: 'none', color: '#D4C5BD', cursor: 'pointer', padding: 0, font: 'inherit' }}
                 >
                   Register Student / Faculty
                 </button>
@@ -143,22 +142,23 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onSignIn, onGetStart
 
         {/* Bottom Bar */}
         <div style={{ 
-          borderTop: '1px solid var(--border-subtle)', 
+          borderTop: '1px solid rgba(232, 214, 204, 0.15)', 
           paddingTop: '1.5rem', 
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: 'space-between',
           flexWrap: 'wrap',
           gap: '1rem',
-          fontSize: '0.78rem',
-          color: 'var(--text-muted)'
+          fontSize: '0.8rem',
+          color: '#A89891'
         }}>
           <div>
-            © 2026 AUOrbit. Built for autonomous university operations.
+            © 2026 AUOrbit Campus Operations Platform. All rights reserved.
           </div>
-          <div style={{ display: 'flex', gap: '1.5rem' }}>
-            <span>PostgreSQL / Supabase Verified</span>
-            <span>Gemini Structured Understanding</span>
+          <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
+            <span style={{ color: '#FF8C42', fontWeight: 600 }}>PostgreSQL & SQLite Dual Architecture</span>
+            <span>·</span>
+            <span>Gemini Multimodal Triage</span>
           </div>
         </div>
 

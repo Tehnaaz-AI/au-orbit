@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { User } from '../types';
 import { api, setStoredToken, setStoredUser } from '../api';
 import { 
@@ -7,14 +8,17 @@ import {
   Mail, 
   Eye, 
   EyeOff, 
-  ArrowLeft,
-  Shield,
-  Zap,
-  GraduationCap,
-  BookOpen,
-  Wrench,
+  ArrowLeft, 
+  Zap, 
+  GraduationCap, 
+  BookOpen, 
+  Wrench, 
+  Shield, 
   ShieldAlert,
-  UserCheck
+  CheckCircle2,
+  Sparkles,
+  ShieldCheck,
+  RefreshCw
 } from 'lucide-react';
 
 interface LoginScreenProps {
@@ -28,52 +32,42 @@ const DEMO_PRESETS = [
   {
     role: 'FACULTY',
     label: 'Faculty',
-    name: 'Dr. Ananya S.',
     email: 'faculty@anurag.edu.in',
     password: 'password123',
-    icon: <BookOpen size={14} />,
-    color: '#E35336',
-    desc: 'Report classroom breakages & verify repairs'
+    icon: <BookOpen size={12} />,
+    color: '#E35336'
   },
   {
     role: 'STUDENT',
     label: 'Student',
-    name: 'Rahul Sharma',
     email: 'student@anurag.edu.in',
     password: 'password123',
-    icon: <GraduationCap size={14} />,
-    color: '#A0522D',
-    desc: 'Report campus issues & track status'
+    icon: <GraduationCap size={12} />,
+    color: '#A0522D'
   },
   {
     role: 'TECHNICIAN',
     label: 'Technician',
-    name: 'Arjun Rao',
     email: 'technician@anurag.edu.in',
     password: 'password123',
-    icon: <Wrench size={14} />,
-    color: '#D97706',
-    desc: 'Execute work orders & complete maintenance'
+    icon: <Wrench size={12} />,
+    color: '#D97706'
   },
   {
     role: 'ADMIN',
-    label: 'Campus Admin',
-    name: 'Operations Admin',
+    label: 'Admin',
     email: 'admin@anurag.edu.in',
     password: 'password123',
-    icon: <Shield size={14} />,
-    color: '#2563EB',
-    desc: 'Campus dispatch, resources & timetable'
+    icon: <Shield size={12} />,
+    color: '#2563EB'
   },
   {
     role: 'SUPER_ADMIN',
     label: 'Super Admin',
-    name: 'Platform Super Admin',
     email: 'superadmin@anurag.edu.in',
     password: 'password123',
-    icon: <ShieldAlert size={14} />,
-    color: '#7C3AED',
-    desc: 'Cross-tenant platform administration'
+    icon: <ShieldAlert size={12} />,
+    color: '#7C3AED'
   }
 ];
 
@@ -90,7 +84,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const [loginPassword, setLoginPassword] = useState('');
   const [showLoginPassword, setShowLoginPassword] = useState(false);
 
-  // Register Form (Student / Faculty self-registration only)
+  // Register Form
   const [regFullName, setRegFullName] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
@@ -109,7 +103,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       setStoredToken(res.token);
       setStoredUser(res.user);
       onLoginSuccess(res.user);
-      onSuccess(`Welcome back, ${res.user.full_name}!`);
+      onSuccess(`Welcome, ${res.user.full_name}`);
     } catch (err: any) {
       onError(err.message || 'Invalid email or password');
     } finally {
@@ -126,9 +120,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       setStoredToken(res.token);
       setStoredUser(res.user);
       onLoginSuccess(res.user);
-      onSuccess(`Authenticated as ${res.user.full_name} (${res.user.role})`);
+      onSuccess(`Logged in as ${res.user.full_name}`);
     } catch (err: any) {
-      onError(err.message || 'Quick login failed. Ensure database has initialized.');
+      onError(err.message || 'Login failed. Please check credentials.');
     } finally {
       setLoading(false);
     }
@@ -149,7 +143,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       setStoredToken(res.token);
       setStoredUser(res.user);
       onLoginSuccess(res.user);
-      onSuccess(`Account created for ${res.user.full_name}!`);
+      onSuccess(`Account created for ${res.user.full_name}`);
     } catch (err: any) {
       onError(err.message || 'Registration failed');
     } finally {
@@ -159,289 +153,410 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
   return (
     <div style={{
-      minHeight: '100vh',
+      minHeight: '84vh',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '2rem 1.5rem',
-      backgroundColor: 'var(--bg-page)'
+      padding: '1.25rem',
+      width: '100%'
     }}>
-      <div style={{
-        width: '100%',
-        maxWidth: 520,
-        background: '#FFFFFF',
-        border: '1px solid var(--border-default)',
-        borderRadius: 'var(--radius-lg)',
-        padding: '2.25rem',
-        boxShadow: 'var(--shadow-modal)'
-      }}>
+      <div 
+        className="auth-split-container"
+        style={{
+          width: '100%',
+          maxWidth: '860px',
+          background: '#FFFFFF',
+          border: '1px solid var(--border-default)',
+          borderRadius: '20px',
+          overflow: 'hidden',
+          boxShadow: 'var(--shadow-modal)',
+          display: 'flex',
+          flexWrap: 'wrap',
+          position: 'relative'
+        }}
+      >
         
-        {/* Back to Home Link */}
-        {onBackToLanding && (
-          <button 
-            type="button"
-            className="btn btn-ghost btn-sm"
-            onClick={onBackToLanding}
-            style={{ marginBottom: '1.25rem', padding: '0.2rem 0.4rem', color: 'var(--text-muted)' }}
-          >
-            <ArrowLeft size={14} /> Back to Overview
-          </button>
-        )}
+        {/* ============================================================
+            LEFT HALF: DOMINANT COLOR BACKGROUND & CRISP WHITE TEXT
+            ============================================================ */}
+        <div 
+          className="auth-left-panel"
+          style={{
+            flex: '1 1 360px',
+            background: 'linear-gradient(145deg, #E35336 0%, #C84328 45%, #922E19 100%)',
+            color: '#FFFFFF',
+            padding: '2.5rem 2.25rem',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            position: 'relative',
+            overflow: 'hidden'
+          }}
+        >
+          {/* Ambient Glow & Orbital Ring Graphics in Left Card */}
+          <div style={{
+            position: 'absolute',
+            top: '-80px',
+            right: '-80px',
+            width: '260px',
+            height: '260px',
+            borderRadius: '50%',
+            border: '1px dashed rgba(255, 255, 255, 0.22)',
+            pointerEvents: 'none'
+          }} />
+          <div style={{
+            position: 'absolute',
+            bottom: '-100px',
+            left: '-60px',
+            width: '320px',
+            height: '320px',
+            borderRadius: '50%',
+            border: '1px solid rgba(255, 255, 255, 0.14)',
+            pointerEvents: 'none'
+          }} />
 
-        {/* Brand Header */}
-        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-          <div className="navbar-brand-mark" style={{ margin: '0 auto 0.75rem', width: 38, height: 38, fontSize: '1.05rem' }}>
-            AU
-          </div>
-          <h1 style={{ fontSize: '1.45rem', color: 'var(--text-main)', marginBottom: '0.35rem' }}>
-            AUOrbit Operations
-          </h1>
-          <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)' }}>
-            Autonomous University Operations & Dispatch System
-          </p>
-        </div>
-
-        {/* Mode Switcher Tabs */}
-        <div style={{ 
-          display: 'flex', 
-          background: 'var(--bg-surface)', 
-          padding: '0.25rem', 
-          borderRadius: 'var(--radius-sm)', 
-          marginBottom: '1.25rem',
-          border: '1px solid var(--border-subtle)'
-        }}>
-          <button
-            type="button"
-            className={`btn btn-sm ${mode === 'LOGIN' ? 'btn-primary' : 'btn-ghost'}`}
-            style={{ flex: 1 }}
-            onClick={() => setMode('LOGIN')}
-          >
-            Sign In
-          </button>
-          <button
-            type="button"
-            className={`btn btn-sm ${mode === 'REGISTER' ? 'btn-primary' : 'btn-ghost'}`}
-            style={{ flex: 1 }}
-            onClick={() => setMode('REGISTER')}
-          >
-            Register Account
-          </button>
-        </div>
-
-        {/* SIGN IN FORM */}
-        {mode === 'LOGIN' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            
-            {/* 1-Click Role Fill & Login */}
-            <div style={{
-              background: 'var(--bg-surface)',
-              borderRadius: 'var(--radius-sm)',
-              border: '1px solid var(--border-subtle)',
-              padding: '0.85rem'
+          {/* Top Brand Logo Container */}
+          <div style={{ position: 'relative', zIndex: 2 }}>
+            <div style={{ 
+              display: 'inline-block',
+              background: '#FFFFFF', 
+              padding: '6px 14px', 
+              borderRadius: '10px',
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.15)',
+              marginBottom: '1.75rem'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.65rem' }}>
-                <Zap size={14} color="var(--color-primary)" />
-                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-main)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  1-Click Role Login (Presentation Presets)
-                </span>
-              </div>
+              <img 
+                src="/logo.png" 
+                alt="AUOrbit" 
+                style={{ height: 28, objectFit: 'contain', display: 'block' }} 
+              />
+            </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.45rem' }}>
-                {DEMO_PRESETS.map(p => (
-                  <button
-                    key={p.role}
-                    type="button"
-                    disabled={loading}
-                    onClick={() => handleQuickLogin(p.email, p.password)}
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'flex-start',
-                      padding: '0.45rem 0.6rem',
-                      borderRadius: 'var(--radius-xs)',
-                      background: '#FFFFFF',
-                      border: '1px solid var(--border-default)',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      transition: 'all 0.15s ease'
-                    }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.borderColor = 'var(--color-primary)';
-                      e.currentTarget.style.transform = 'translateY(-1px)';
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.borderColor = 'var(--border-default)';
-                      e.currentTarget.style.transform = 'translateY(0)';
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: p.color, fontWeight: 700, fontSize: '0.78rem', marginBottom: 2 }}>
-                      {p.icon}
+            <h2 style={{ 
+              fontSize: '1.75rem', 
+              lineHeight: 1.2, 
+              fontWeight: 800, 
+              color: '#FFFFFF', 
+              marginBottom: '0.85rem',
+              fontFamily: 'var(--font-heading)'
+            }}>
+              Autonomous Campus Operations Platform
+            </h2>
+
+            <p style={{ 
+              fontSize: '0.92rem', 
+              lineHeight: 1.6, 
+              color: 'rgba(255, 255, 255, 0.9)',
+              marginBottom: '1.75rem'
+            }}>
+              Coordinating natural-language reporting, dynamic timetable context, specialist dispatch, and self-healing recovery.
+            </p>
+
+            {/* Value Highlights */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', fontSize: '0.84rem', color: '#FFFFFF' }}>
+                <CheckCircle2 size={16} color="#FFE0D3" /> Multimodal Photo & Video Issue Intake
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', fontSize: '0.84rem', color: '#FFFFFF' }}>
+                <CheckCircle2 size={16} color="#FFE0D3" /> 9-Agent Deterministic Workflow
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', fontSize: '0.84rem', color: '#FFFFFF' }}>
+                <CheckCircle2 size={16} color="#FFE0D3" /> Closed-Loop Visual Verification & Replan
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Security / Status Footer in Left Panel */}
+          <div style={{ 
+            marginTop: '2rem', 
+            paddingTop: '1rem', 
+            borderTop: '1px solid rgba(255, 255, 255, 0.18)', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            fontSize: '0.75rem',
+            color: 'rgba(255, 255, 255, 0.8)',
+            position: 'relative', 
+            zIndex: 2 
+          }}>
+            <span>Institutional RBAC Protected</span>
+            <span style={{ fontWeight: 700 }}>v2.0</span>
+          </div>
+
+        </div>
+
+        {/* ============================================================
+            RIGHT HALF: DETAILS & AUTHENTICATION FORM CARD
+            ============================================================ */}
+        <div 
+          className="auth-right-panel"
+          style={{
+            flex: '1 1 380px',
+            padding: '2.25rem 2rem',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            background: '#FFFFFF'
+          }}
+        >
+          
+          {/* Top Bar with Back Button */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              {mode === 'LOGIN' ? 'Sign In to Account' : 'Create New Account'}
+            </div>
+
+            {onBackToLanding && (
+              <button 
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={onBackToLanding}
+                style={{ padding: '0.2rem 0.45rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}
+              >
+                <ArrowLeft size={13} /> Back to Overview
+              </button>
+            )}
+          </div>
+
+          {/* Mode Switcher Tabs */}
+          <div style={{ 
+            display: 'flex', 
+            background: 'var(--bg-surface)', 
+            padding: '0.25rem', 
+            borderRadius: 'var(--radius-sm)', 
+            marginBottom: '1.25rem',
+            border: '1px solid var(--border-subtle)'
+          }}>
+            <button
+              type="button"
+              className={`btn btn-sm ${mode === 'LOGIN' ? 'btn-primary' : 'btn-ghost'}`}
+              style={{ flex: 1, padding: '0.4rem', fontSize: '0.84rem' }}
+              onClick={() => setMode('LOGIN')}
+            >
+              Sign In
+            </button>
+            <button
+              type="button"
+              className={`btn btn-sm ${mode === 'REGISTER' ? 'btn-primary' : 'btn-ghost'}`}
+              style={{ flex: 1, padding: '0.4rem', fontSize: '0.84rem' }}
+              onClick={() => setMode('REGISTER')}
+            >
+              Register
+            </button>
+          </div>
+
+          {/* SIGN IN VIEW */}
+          {mode === 'LOGIN' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              
+              {/* Quick Role Fill Presets */}
+              <div style={{
+                background: 'var(--bg-surface)',
+                borderRadius: 'var(--radius-sm)',
+                border: '1px solid var(--border-subtle)',
+                padding: '0.65rem 0.75rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.45rem' }}>
+                  <Zap size={13} color="var(--color-primary)" />
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-main)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    1-Click Role Presets
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+                  {DEMO_PRESETS.map(p => (
+                    <button
+                      key={p.role}
+                      type="button"
+                      disabled={loading}
+                      onClick={() => handleQuickLogin(p.email, p.password)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.28rem',
+                        padding: '0.25rem 0.55rem',
+                        borderRadius: 'var(--radius-full)',
+                        background: '#FFFFFF',
+                        border: '1px solid var(--border-default)',
+                        cursor: 'pointer',
+                        fontSize: '0.74rem',
+                        fontWeight: 600,
+                        color: 'var(--text-main)',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.borderColor = 'var(--color-primary)';
+                        e.currentTarget.style.background = 'var(--color-primary-subtle)';
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.borderColor = 'var(--border-default)';
+                        e.currentTarget.style.background = '#FFFFFF';
+                      }}
+                    >
+                      <span style={{ color: p.color, display: 'flex', alignItems: 'center' }}>{p.icon}</span>
                       <span>{p.label}</span>
-                    </div>
-                    <span style={{ fontSize: '0.66rem', color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>
-                      {p.email}
-                    </span>
-                  </button>
-                ))}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-dim)', fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>
-              <div style={{ flex: 1, height: 1, background: 'var(--border-subtle)' }} />
-              <span>Or Sign In Manually</span>
-              <div style={{ flex: 1, height: 1, background: 'var(--border-subtle)' }} />
-            </div>
+              {/* Form inputs */}
+              <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>University Email</label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type="email"
+                      className="form-input"
+                      value={loginEmail}
+                      onChange={e => setLoginEmail(e.target.value)}
+                      placeholder="user@anurag.edu.in"
+                      required
+                      style={{ paddingLeft: '2.1rem', fontSize: '0.86rem', padding: '0.5rem 0.75rem 0.5rem 2.1rem' }}
+                    />
+                    <Mail size={15} color="var(--text-dim)" style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)' }} />
+                  </div>
+                </div>
 
-            {/* Manual Form */}
-            <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Password</label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type={showLoginPassword ? 'text' : 'password'}
+                      className="form-input"
+                      value={loginPassword}
+                      onChange={e => setLoginPassword(e.target.value)}
+                      placeholder="••••••••"
+                      required
+                      style={{ paddingLeft: '2.1rem', paddingRight: '2.1rem', fontSize: '0.86rem', padding: '0.5rem 2.1rem 0.5rem 2.1rem' }}
+                    />
+                    <Lock size={15} color="var(--text-dim)" style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)' }} />
+                    <button
+                      type="button"
+                      onClick={() => setShowLoginPassword(!showLoginPassword)}
+                      style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)' }}
+                    >
+                      {showLoginPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                </div>
+
+                <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: '100%', marginTop: '0.35rem', padding: '0.6rem' }}>
+                  {loading ? 'Authenticating...' : 'Sign In'} <ArrowRight size={15} />
+                </button>
+              </form>
+
+            </div>
+          )}
+
+          {/* REGISTER VIEW */}
+          {mode === 'REGISTER' && (
+            <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">University Email</label>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type="email"
-                    className="form-input"
-                    value={loginEmail}
-                    onChange={e => setLoginEmail(e.target.value)}
-                    placeholder="faculty@anurag.edu.in"
-                    required
-                    style={{ paddingLeft: '2.25rem' }}
-                  />
-                  <Mail size={15} color="var(--text-dim)" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }} />
+                <label className="form-label" style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Role</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem' }}>
+                  <button
+                    type="button"
+                    className={`btn btn-sm ${regRole === 'STUDENT' ? 'btn-primary' : 'btn-secondary'}`}
+                    onClick={() => setRegRole('STUDENT')}
+                    style={{ padding: '0.35rem', fontSize: '0.8rem' }}
+                  >
+                    Student
+                  </button>
+                  <button
+                    type="button"
+                    className={`btn btn-sm ${regRole === 'FACULTY' ? 'btn-primary' : 'btn-secondary'}`}
+                    onClick={() => setRegRole('FACULTY')}
+                    style={{ padding: '0.35rem', fontSize: '0.8rem' }}
+                  >
+                    Faculty
+                  </button>
                 </div>
               </div>
 
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Password</label>
+                <label className="form-label" style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Full Name</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={regFullName}
+                  onChange={e => setRegFullName(e.target.value)}
+                  placeholder="Full Name"
+                  required
+                  style={{ padding: '0.45rem 0.65rem', fontSize: '0.84rem' }}
+                />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label" style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>University Email</label>
+                <input
+                  type="email"
+                  className="form-input"
+                  value={regEmail}
+                  onChange={e => setRegEmail(e.target.value)}
+                  placeholder="email@anurag.edu.in"
+                  required
+                  style={{ padding: '0.45rem 0.65rem', fontSize: '0.84rem' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Department</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={regDepartment}
+                    onChange={e => setRegDepartment(e.target.value)}
+                    placeholder="Department of AI"
+                    required
+                    style={{ padding: '0.45rem 0.65rem', fontSize: '0.84rem' }}
+                  />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Phone</label>
+                  <input
+                    type="tel"
+                    className="form-input"
+                    value={regPhone}
+                    onChange={e => setRegPhone(e.target.value)}
+                    placeholder="+91..."
+                    style={{ padding: '0.45rem 0.65rem', fontSize: '0.84rem' }}
+                  />
+                </div>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label" style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Password</label>
                 <div style={{ position: 'relative' }}>
                   <input
-                    type={showLoginPassword ? 'text' : 'password'}
+                    type={showRegPassword ? 'text' : 'password'}
                     className="form-input"
-                    value={loginPassword}
-                    onChange={e => setLoginPassword(e.target.value)}
+                    value={regPassword}
+                    onChange={e => setRegPassword(e.target.value)}
                     placeholder="••••••••"
                     required
-                    style={{ paddingLeft: '2.25rem', paddingRight: '2.25rem' }}
+                    style={{ padding: '0.45rem 2.1rem 0.45rem 0.65rem', fontSize: '0.84rem' }}
                   />
-                  <Lock size={15} color="var(--text-dim)" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }} />
                   <button
                     type="button"
-                    onClick={() => setShowLoginPassword(!showLoginPassword)}
-                    style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)' }}
+                    onClick={() => setShowRegPassword(!showRegPassword)}
+                    style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)' }}
                   >
-                    {showLoginPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                    {showRegPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                   </button>
                 </div>
               </div>
 
-              <button type="submit" className="btn btn-primary btn-lg" disabled={loading} style={{ width: '100%', marginTop: '0.25rem' }}>
-                {loading ? 'Authenticating...' : 'Sign In'} <ArrowRight size={16} />
+              <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: '100%', marginTop: '0.4rem', padding: '0.55rem' }}>
+                {loading ? 'Creating Account...' : 'Register'} <ArrowRight size={15} />
               </button>
             </form>
-          </div>
-        )}
+          )}
 
-        {/* REGISTRATION FORM (Student / Faculty Only) */}
-        {mode === 'REGISTER' && (
-          <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '0.95rem' }}>
-            
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">Account Role</label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                <button
-                  type="button"
-                  className={`btn btn-sm ${regRole === 'STUDENT' ? 'btn-primary' : 'btn-secondary'}`}
-                  onClick={() => setRegRole('STUDENT')}
-                >
-                  Student
-                </button>
-                <button
-                  type="button"
-                  className={`btn btn-sm ${regRole === 'FACULTY' ? 'btn-primary' : 'btn-secondary'}`}
-                  onClick={() => setRegRole('FACULTY')}
-                >
-                  Faculty Member
-                </button>
-              </div>
-              <small style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 6, display: 'block', lineHeight: 1.4 }}>
-                <Shield size={12} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />
-                Administrator and technician accounts are provisioned securely via university admin bootstrap.
-              </small>
-            </div>
-
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">Full Name</label>
-              <input
-                type="text"
-                className="form-input"
-                value={regFullName}
-                onChange={e => setRegFullName(e.target.value)}
-                placeholder="Rahul Varma"
-                required
-              />
-            </div>
-
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">University Email</label>
-              <input
-                type="email"
-                className="form-input"
-                value={regEmail}
-                onChange={e => setRegEmail(e.target.value)}
-                placeholder="rahul@anurag.edu.in"
-                required
-              />
-            </div>
-
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">Department / Branch</label>
-              <input
-                type="text"
-                className="form-input"
-                value={regDepartment}
-                onChange={e => setRegDepartment(e.target.value)}
-                placeholder="Department of AI"
-                required
-              />
-            </div>
-
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">Mobile Phone (Optional WhatsApp Alert)</label>
-              <input
-                type="tel"
-                className="form-input"
-                value={regPhone}
-                onChange={e => setRegPhone(e.target.value)}
-                placeholder="+919876543210"
-              />
-            </div>
-
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">Password</label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type={showRegPassword ? 'text' : 'password'}
-                  className="form-input"
-                  value={regPassword}
-                  onChange={e => setRegPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                  style={{ paddingRight: '2.25rem' }}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowRegPassword(!showRegPassword)}
-                  style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)' }}
-                >
-                  {showRegPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                </button>
-              </div>
-            </div>
-
-            <button type="submit" className="btn btn-primary btn-lg" disabled={loading} style={{ width: '100%', marginTop: '0.5rem' }}>
-              {loading ? 'Creating Account...' : 'Register Account'} <ArrowRight size={16} />
-            </button>
-          </form>
-        )}
+        </div>
 
       </div>
     </div>

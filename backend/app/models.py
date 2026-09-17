@@ -136,6 +136,7 @@ class Incident(Base):
     category: Mapped[str] = mapped_column(String(40))
     priority: Mapped[str] = mapped_column(String(20))
     status: Mapped[str] = mapped_column(String(30), default='REPORTED')
+    media_urls: Mapped[list] = mapped_column(JSON, default=list)
     replan_count: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
@@ -156,6 +157,7 @@ class WorkOrder(Base):
     status: Mapped[str] = mapped_column(String(30), default='PENDING')
     scheduled_for: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    resolution_media: Mapped[list] = mapped_column(JSON, default=list)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     incident: Mapped["Incident"] = relationship(back_populates="work_orders")

@@ -1,102 +1,49 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Incident, TimetableItem, Room, User } from '../types';
 import { api } from '../api';
-import { 
-  CheckCircle, 
-  RotateCcw, 
-  Send, 
-  Inbox, 
-  AlertTriangle, 
-  GraduationCap, 
-  ArrowRight
-} from 'lucide-react';
+import { IncidentList } from './incidents/IncidentList';
+import { ReportIssueForm } from './reporting/ReportIssueForm';
+import { RotateCcw, GraduationCap, Calendar, CheckCircle2 } from 'lucide-react';
 
 interface FacultyPortalProps {
   currentUser: User;
   incidents: Incident[];
   timetable: TimetableItem[];
   rooms: Room[];
+  activeTab?: string;
   onSelectIncident?: (incident: Incident) => void;
   onRefresh: () => void;
   onError: (msg: string) => void;
   onSuccess: (msg: string) => void;
 }
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.08, delayChildren: 0.04 }
-  }
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 12 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.35, ease: "easeOut" as const }
-  }
-};
-
 export const FacultyPortal: React.FC<FacultyPortalProps> = ({
   currentUser,
   incidents,
   timetable,
   rooms,
+  activeTab = 'my_issues',
   onSelectIncident,
   onRefresh,
   onError,
   onSuccess
 }) => {
-  const [selectedRoom, setSelectedRoom] = useState('I-302');
-  const [description, setDescription] = useState('');
-  const [submitting, setSubmitting] = useState(false);
   const [verifyingId, setVerifyingId] = useState<number | null>(null);
-  const [submittedIncident, setSubmittedIncident] = useState<Incident | null>(null);
 
-  const pendingVerification = incidents.filter(i => 
-    i.status === 'AWAITING_VERIFICATION' || 
-    (i.work_order?.status === 'COMPLETED' && !['RESOLVED', 'CLOSED'].includes(i.status))
-  );
-
-  const facultyTimetable = timetable.slice(0, 6);
-
-  async function handleReportUrgent(e: React.FormEvent) {
-    e.preventDefault();
-    if (!description.trim()) return;
-    setSubmitting(true);
-    try {
-      const created = await api.reportIncident({
-        reporter: `${currentUser.full_name} [FACULTY]`,
-        description: description.trim(),
-        room_code: selectedRoom.trim() || undefined
-      });
-      setSubmittedIncident(created);
-      onSuccess(`Priority Incident #${created.id} reported.`);
-      setDescription('');
-      onRefresh();
-    } catch (err: any) {
-      onError(err.message || 'Failed to submit incident');
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
+  // Faculty verification handler
   async function handleVerification(workOrderId: number, outcome: 'pass' | 'fail') {
     setVerifyingId(workOrderId);
     try {
       await api.workOrderAction(workOrderId, 'verify', {
         outcome,
         notes: outcome === 'pass' 
-          ? 'Faculty verified: Equipment restored and operational.' 
-          : 'Faculty rejected: Issue persists.'
+          ? `Faculty verified by ${currentUser.full_name}: Classroom equipment restored and fully operational.` 
+          : `Faculty rejected by ${currentUser.full_name}: Issue still persists.`
       });
       if (outcome === 'pass') {
-        onSuccess('Resolution verified. Classroom restored.');
+        onSuccess('Resolution verified. Classroom restored to standard operational status.');
       } else {
-        onError('Verification rejected. Autonomous replanning triggered.');
+        onError('Verification rejected. Autonomous multi-agent replanning triggered.');
       }
       onRefresh();
     } catch (err: any) {
@@ -107,252 +54,62 @@ export const FacultyPortal: React.FC<FacultyPortalProps> = ({
   }
 
   return (
-    <motion.div 
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}
-    >
-      
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       {/* Header */}
-      <motion.div 
-        variants={itemVariants}
-        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}
-      >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div>
           <h1 style={{ fontSize: '1.5rem', marginBottom: '0.2rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
             <GraduationCap color="var(--color-primary)" size={22} />
-            Classroom & Department Operations
+            {activeTab === 'report_issue' ? 'Report Classroom / Department Issue' : 'Classroom & Department Operations'}
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>
-            Classroom maintenance dispatch with timetable-aware priority escalation and resolution sign-off.
+            {activeTab === 'report_issue'
+              ? 'Report lecture hall or departmental technical problems with automatic timetable-based escalation.'
+              : 'Classroom maintenance tracking, instructional priority escalation, and faculty sign-off verification.'}
           </p>
         </div>
 
-        <motion.button 
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.97 }}
+        <button 
           type="button" 
           className="btn btn-secondary btn-sm" 
           onClick={onRefresh}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
         >
           <RotateCcw size={13} /> Refresh
-        </motion.button>
-      </motion.div>
+        </button>
+      </div>
 
-      {/* Classroom Emergency Escalation */}
-      <motion.div variants={itemVariants} className="card card-interactive">
-        <div className="card-header">
-          <span className="card-title">
-            Report Classroom Issue
-          </span>
-          <span className="badge badge-warning">Timetable Linked</span>
-        </div>
+      {/* VIEW 1: REPORT ISSUE FORM */}
+      {activeTab === 'report_issue' && (
+        <ReportIssueForm
+          currentUser={currentUser}
+          rooms={rooms}
+          onIncidentReported={(_inc) => {
+            onRefresh();
+          }}
+          onSelectIncident={onSelectIncident}
+          onError={onError}
+          onSuccess={onSuccess}
+          title="Report Classroom Issue"
+          subtitle="AUOrbit cross-references your active lecture schedule to automatically set priority and dispatch specialists."
+        />
+      )}
 
-        {/* Timetable Quick Selector */}
-        {facultyTimetable.length > 0 && (
-          <div style={{ marginBottom: '0.85rem' }}>
-            <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '0.35rem' }}>
-              Select Teaching Space (From Reference Timetable)
-            </span>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '0.45rem' }}>
-              {facultyTimetable.map(item => (
-                <motion.div 
-                  key={item.id}
-                  whileHover={{ scale: 1.02, y: -2 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => setSelectedRoom(item.room_code)}
-                  style={{
-                    padding: '0.5rem 0.65rem',
-                    borderRadius: 'var(--radius-sm)',
-                    border: '1px solid',
-                    borderColor: selectedRoom === item.room_code ? 'var(--color-primary)' : 'var(--border-subtle)',
-                    background: selectedRoom === item.room_code ? 'var(--color-primary-subtle)' : 'var(--bg-surface)',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                    <span>{item.room_code}</span>
-                    <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Period {item.period}</span>
-                  </div>
-                  <div style={{ fontSize: '0.74rem', color: 'var(--text-body)' }}>{item.subject} ({item.section})</div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {submittedIncident ? (
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            style={{ 
-              padding: '1.25rem', 
-              background: 'var(--status-success-bg)', 
-              borderRadius: 'var(--radius-sm)', 
-              border: '1px solid var(--status-success-border)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.75rem'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--status-success-text)', fontWeight: 700, fontSize: '0.9rem' }}>
-              <CheckCircle size={18} />
-              <span>Priority Incident #{submittedIncident.id} reported</span>
-            </div>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-body)', margin: 0 }}>
-              AUOrbit is scheduling immediate emergency specialist intervention for {submittedIncident.room_code || 'Space'}.
-            </p>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              {onSelectIncident && (
-                <motion.button 
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                  type="button" 
-                  className="btn btn-primary btn-sm"
-                  onClick={() => {
-                    onSelectIncident(submittedIncident);
-                    setSubmittedIncident(null);
-                  }}
-                >
-                  View Live Progress <ArrowRight size={13} />
-                </motion.button>
-              )}
-              <motion.button 
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                type="button" 
-                className="btn btn-secondary btn-sm"
-                onClick={() => setSubmittedIncident(null)}
-              >
-                Report Another
-              </motion.button>
-            </div>
-          </motion.div>
-        ) : (
-          <form onSubmit={handleReportUrgent} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '0.75rem' }}>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" htmlFor="fac-room">Room</label>
-                <input
-                  id="fac-room"
-                  type="text"
-                  className="form-input"
-                  value={selectedRoom}
-                  onChange={e => setSelectedRoom(e.target.value)}
-                  placeholder="I-302"
-                  required
-                />
-              </div>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" htmlFor="fac-desc">Urgent Problem Description</label>
-                <input
-                  id="fac-desc"
-                  type="text"
-                  className="form-input"
-                  value={description}
-                  onChange={e => setDescription(e.target.value)}
-                  placeholder="Describe issue impacting ongoing lecture..."
-                  required
-                />
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <motion.button 
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                type="submit" 
-                className="btn btn-primary" 
-                disabled={submitting || !description.trim()}
-              >
-                {submitting ? 'Escalating...' : 'Report Classroom Issue'} <Send size={14} />
-              </motion.button>
-            </div>
-          </form>
-        )}
-      </motion.div>
-
-      {/* Classroom Resolution Sign-Off */}
-      <motion.div variants={itemVariants} className="card card-interactive">
-        <div className="card-header">
-          <span className="card-title">
-            <CheckCircle size={16} color="var(--status-success-text)" />
-            Classroom Resolution Sign-Off ({pendingVerification.length})
-          </span>
-          <span className="badge badge-role">Verification Audit</span>
-        </div>
-
-        {pendingVerification.length === 0 ? (
-          <div className="empty-state" style={{ padding: '2.5rem 1rem', border: 'none' }}>
-            <div className="empty-state-icon">
-              <Inbox size={22} />
-            </div>
-            <div className="empty-state-title">No spaces awaiting verification</div>
-            <div className="empty-state-text">
-              Repaired classrooms requiring faculty confirmation before closure will appear here automatically.
-            </div>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <AnimatePresence>
-              {pendingVerification.map(inc => (
-                <motion.div 
-                  key={inc.id}
-                  layout
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.96 }}
-                  style={{ 
-                    background: 'var(--status-success-bg)', 
-                    border: '1px solid var(--status-success-border)', 
-                    borderRadius: 'var(--radius-sm)', 
-                    padding: '1rem' 
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
-                    <div>
-                      <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--status-success-text)' }}>
-                        Incident #{inc.id} · Space: {inc.room_code || 'Classroom'}
-                      </span>
-                      <p style={{ fontSize: '0.84rem', color: 'var(--text-body)', margin: '0.2rem 0 0' }}>
-                        {inc.description}
-                      </p>
-                    </div>
-
-                    {inc.work_order && (
-                      <div style={{ display: 'flex', gap: '0.45rem' }}>
-                        <motion.button 
-                          whileHover={{ scale: 1.04 }}
-                          whileTap={{ scale: 0.96 }}
-                          type="button"
-                          className="btn btn-success btn-sm"
-                          disabled={verifyingId === inc.work_order.id}
-                          onClick={() => handleVerification(inc.work_order!.id, 'pass')}
-                        >
-                          <CheckCircle size={13} /> Verify Fixed
-                        </motion.button>
-                        <motion.button 
-                          whileHover={{ scale: 1.04 }}
-                          whileTap={{ scale: 0.96 }}
-                          type="button"
-                          className="btn btn-danger btn-sm"
-                          disabled={verifyingId === inc.work_order.id}
-                          onClick={() => handleVerification(inc.work_order!.id, 'fail')}
-                        >
-                          <AlertTriangle size={13} /> Still Broken (Trigger Replan)
-                        </motion.button>
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
-        )}
-      </motion.div>
-
-    </motion.div>
+      {/* VIEW 2: CLASSROOM & DEPT ISSUES */}
+      {activeTab === 'my_issues' && (
+        <IncidentList
+          incidents={incidents}
+          onSelectIncident={onSelectIncident || (() => {})}
+          title="Department Incidents"
+          subtitle="All classroom and academic facility maintenance orders with sign-off verification."
+          emptyTitle="No classroom issues currently reported"
+          emptyDescription="Classroom and lab issues requiring faculty awareness or sign-off will appear here."
+          showFilters={true}
+          showVerificationActions={true}
+          onVerify={handleVerification}
+          isVerifying={verifyingId !== null}
+        />
+      )}
+    </div>
   );
 };

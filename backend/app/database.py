@@ -47,6 +47,8 @@ def ensure_schema(engine_to_check=None):
             cols = [c['name'] for c in inspector.get_columns('work_orders')]
             if 'started_at' not in cols:
                 conn.execute(text("ALTER TABLE work_orders ADD COLUMN started_at DATETIME;"))
+            if 'resolution_media' not in cols:
+                conn.execute(text("ALTER TABLE work_orders ADD COLUMN resolution_media JSON DEFAULT '[]';"))
                 
         if 'incidents' in existing_tables:
             cols = [c['name'] for c in inspector.get_columns('incidents')]
@@ -54,6 +56,8 @@ def ensure_schema(engine_to_check=None):
                 conn.execute(text("ALTER TABLE incidents ADD COLUMN replan_count INTEGER DEFAULT 0;"))
             if 'reporter_id' not in cols:
                 conn.execute(text("ALTER TABLE incidents ADD COLUMN reporter_id INTEGER;"))
+            if 'media_urls' not in cols:
+                conn.execute(text("ALTER TABLE incidents ADD COLUMN media_urls JSON DEFAULT '[]';"))
 
         if 'technicians' in existing_tables:
             cols = [c['name'] for c in inspector.get_columns('technicians')]

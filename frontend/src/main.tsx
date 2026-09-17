@@ -20,10 +20,12 @@ import { StudentPortal } from './components/StudentPortal';
 import { FacultyPortal } from './components/FacultyPortal';
 import { TechnicianPortal } from './components/TechnicianPortal';
 import { AdminConsole } from './components/AdminConsole';
-import { WorkOrdersView } from './components/WorkOrdersView';
-import { ResourcesView } from './components/ResourcesView';
 import { IncidentDetailModal } from './components/IncidentDetailModal';
+import { AboutPage } from './components/pages/AboutPage';
+import { ProfilePage } from './components/pages/ProfilePage';
+import { NotFoundPage } from './components/pages/NotFoundPage';
 import { Footer } from './components/Footer';
+import { OrbitBackground } from './components/OrbitBackground';
 
 // Icons
 import { AlertCircle, CheckCircle, X } from 'lucide-react';
@@ -144,9 +146,32 @@ export function App() {
 
   // 1. PUBLIC VISITOR EXPERIENCE
   if (!currentUser) {
-    if (showAuthScreen) {
+    if (activeTab === 'about') {
       return (
         <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-page)' }}>
+          <Navbar
+            currentUser={null}
+            activeTab="about"
+            onSelectTab={setActiveTab}
+            onSignIn={() => { setShowAuthScreen(true); setActiveTab('dashboard'); }}
+            onGetStarted={() => { setShowAuthScreen(true); setActiveTab('dashboard'); }}
+          />
+          <main style={{ flex: 1 }}>
+            <AboutPage onBackToApp={() => setActiveTab('landing')} />
+          </main>
+          <Footer
+            onNavigate={setActiveTab}
+            onSignIn={() => { setShowAuthScreen(true); setActiveTab('dashboard'); }}
+            onGetStarted={() => { setShowAuthScreen(true); setActiveTab('dashboard'); }}
+          />
+        </div>
+      );
+    }
+
+    if (showAuthScreen) {
+      return (
+        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-page)', position: 'relative' }}>
+          <OrbitBackground />
           <Navbar
             currentUser={null}
             onSelectTab={() => setShowAuthScreen(false)}
@@ -155,14 +180,14 @@ export function App() {
           />
 
           {toast && (
-            <div className="toast-bar" style={{ borderColor: toast.type === 'error' ? 'var(--status-error-border)' : 'var(--color-primary)' }}>
-              {toast.type === 'error' ? <AlertCircle size={15} color="var(--status-error-text)" /> : <CheckCircle size={15} color="var(--color-primary)" />}
+            <div className="toast-bar" style={{ borderColor: toast.type === 'error' ? 'var(--status-danger-border)' : 'var(--primary-dark)' }}>
+              {toast.type === 'error' ? <AlertCircle size={15} color="var(--status-danger)" /> : <CheckCircle size={15} color="var(--status-success)" />}
               <span style={{ fontSize: '0.84rem' }}>{toast.message}</span>
               <button className="btn-ghost btn-sm" onClick={() => setToast(null)} style={{ padding: 2, color: '#fff' }}><X size={13} /></button>
             </div>
           )}
 
-          <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1.25rem' }}>
+          <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1.25rem', position: 'relative', zIndex: 1 }}>
             <LoginScreen
               onLoginSuccess={handleLoginSuccess}
               onError={showError}
@@ -172,7 +197,7 @@ export function App() {
           </main>
 
           <Footer
-            onNavigate={() => setShowAuthScreen(false)}
+            onNavigate={setActiveTab}
             onSignIn={() => setShowAuthScreen(true)}
             onGetStarted={() => setShowAuthScreen(true)}
           />
@@ -181,23 +206,25 @@ export function App() {
     }
 
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-page)' }}>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-page)', position: 'relative' }}>
+        <OrbitBackground />
         <Navbar
           currentUser={null}
-          onSelectTab={() => setShowAuthScreen(false)}
+          activeTab={activeTab}
+          onSelectTab={setActiveTab}
           onSignIn={() => setShowAuthScreen(true)}
           onGetStarted={() => setShowAuthScreen(true)}
         />
 
         {toast && (
-          <div className="toast-bar" style={{ borderColor: toast.type === 'error' ? 'var(--status-error-border)' : 'var(--color-primary)' }}>
-            {toast.type === 'error' ? <AlertCircle size={15} color="var(--status-error-text)" /> : <CheckCircle size={15} color="var(--color-primary)" />}
+          <div className="toast-bar" style={{ borderColor: toast.type === 'error' ? 'var(--status-danger-border)' : 'var(--primary-dark)' }}>
+            {toast.type === 'error' ? <AlertCircle size={15} color="var(--status-danger)" /> : <CheckCircle size={15} color="var(--status-success)" />}
             <span style={{ fontSize: '0.84rem' }}>{toast.message}</span>
             <button className="btn-ghost btn-sm" onClick={() => setToast(null)} style={{ padding: 2, color: '#fff' }}><X size={13} /></button>
           </div>
         )}
 
-        <main style={{ flex: 1 }}>
+        <main style={{ flex: 1, position: 'relative', zIndex: 1 }}>
           <LandingPage
             onGetStarted={() => setShowAuthScreen(true)}
             onSignIn={() => setShowAuthScreen(true)}
@@ -206,7 +233,7 @@ export function App() {
         </main>
 
         <Footer
-          onNavigate={() => setShowAuthScreen(false)}
+          onNavigate={setActiveTab}
           onSignIn={() => setShowAuthScreen(true)}
           onGetStarted={() => setShowAuthScreen(true)}
         />
@@ -218,10 +245,13 @@ export function App() {
   const isTechnician = currentUser.role === 'TECHNICIAN';
   const isStudent = currentUser.role === 'STUDENT';
   const isFaculty = currentUser.role === 'FACULTY';
-  const isAdmin = ['ADMIN', 'UNIVERSITY_ADMIN', 'SUPER_ADMIN'].includes(currentUser.role);
+  const isOpsHead = currentUser.role === 'OPERATIONAL_HEAD';
+  const isSuperAdmin = currentUser.role === 'SUPER_ADMIN';
+  const isAdmin = ['ADMIN', 'UNIVERSITY_ADMIN', 'SUPER_ADMIN', 'OPERATIONAL_HEAD'].includes(currentUser.role);
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-page)' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-page)', position: 'relative' }}>
+      <OrbitBackground />
       
       {/* Top Navbar */}
       <Navbar
@@ -239,11 +269,16 @@ export function App() {
         
         {/* Toast Alert Bar */}
         {toast && (
-          <div className="toast-bar" style={{ borderColor: toast.type === 'error' ? 'var(--status-error-border)' : 'var(--color-primary)' }}>
-            {toast.type === 'error' ? <AlertCircle size={15} color="var(--status-error-text)" /> : <CheckCircle size={15} color="var(--color-primary)" />}
+          <div className="toast-bar" style={{ borderColor: toast.type === 'error' ? 'var(--status-danger-border)' : 'var(--primary-dark)' }}>
+            {toast.type === 'error' ? <AlertCircle size={15} color="var(--status-danger)" /> : <CheckCircle size={15} color="var(--status-success)" />}
             <span style={{ fontSize: '0.84rem' }}>{toast.message}</span>
             <button className="btn-ghost btn-sm" onClick={() => setToast(null)} style={{ padding: 2, color: '#fff' }}><X size={13} /></button>
           </div>
+        )}
+
+        {/* Tab: ABOUT AUORBIT */}
+        {activeTab === 'about' && (
+          <AboutPage onBackToApp={() => setActiveTab('dashboard')} />
         )}
 
         {/* Tab 1: OVERVIEW / DASHBOARD */}
@@ -253,6 +288,8 @@ export function App() {
               currentUser={currentUser}
               incidents={incidents}
               technicians={technicians}
+              activeTab="overview"
+              onNavigateTab={setActiveTab}
               onSelectIncident={setSelectedIncident}
               onRefresh={refreshAll}
               onError={showError}
@@ -264,6 +301,7 @@ export function App() {
               incidents={incidents}
               analytics={analytics}
               onSelectIncident={setSelectedIncident}
+              onNavigateTab={setActiveTab}
               onRefresh={refreshAll}
               onError={showError}
               onSuccess={showSuccess}
@@ -271,14 +309,16 @@ export function App() {
           )
         )}
 
-        {/* Tab 2: MY ISSUES / REPORT ISSUE (Student & Faculty) */}
-        {(activeTab === 'my_issues' || activeTab === 'report_issue') && (
+        {/* Tab 2: MY ISSUES / CLASSROOM ISSUES (Data View) */}
+        {activeTab === 'my_issues' && (
           isStudent ? (
             <StudentPortal
               currentUser={currentUser}
               incidents={incidents}
               rooms={rooms}
+              activeTab="my_issues"
               onSelectIncident={setSelectedIncident}
+              onNavigateTab={setActiveTab}
               onRefresh={refreshAll}
               onError={showError}
               onSuccess={showSuccess}
@@ -289,6 +329,7 @@ export function App() {
               incidents={incidents}
               timetable={timetable}
               rooms={rooms}
+              activeTab="my_issues"
               onSelectIncident={setSelectedIncident}
               onRefresh={refreshAll}
               onError={showError}
@@ -300,6 +341,7 @@ export function App() {
               incidents={incidents}
               analytics={analytics}
               onSelectIncident={setSelectedIncident}
+              onNavigateTab={setActiveTab}
               onRefresh={refreshAll}
               onError={showError}
               onSuccess={showSuccess}
@@ -307,7 +349,47 @@ export function App() {
           )
         )}
 
-        {/* Tab 3: INCIDENTS (Admin Oversight) */}
+        {/* Tab 3: REPORT ISSUE (Action Form Only) */}
+        {activeTab === 'report_issue' && (
+          isStudent ? (
+            <StudentPortal
+              currentUser={currentUser}
+              incidents={incidents}
+              rooms={rooms}
+              activeTab="report_issue"
+              onSelectIncident={setSelectedIncident}
+              onNavigateTab={setActiveTab}
+              onRefresh={refreshAll}
+              onError={showError}
+              onSuccess={showSuccess}
+            />
+          ) : isFaculty ? (
+            <FacultyPortal
+              currentUser={currentUser}
+              incidents={incidents}
+              timetable={timetable}
+              rooms={rooms}
+              activeTab="report_issue"
+              onSelectIncident={setSelectedIncident}
+              onRefresh={refreshAll}
+              onError={showError}
+              onSuccess={showSuccess}
+            />
+          ) : (
+            <Dashboard
+              currentUser={currentUser}
+              incidents={incidents}
+              analytics={analytics}
+              onSelectIncident={setSelectedIncident}
+              onNavigateTab={setActiveTab}
+              onRefresh={refreshAll}
+              onError={showError}
+              onSuccess={showSuccess}
+            />
+          )
+        )}
+
+        {/* Tab 4: INCIDENTS (Admin & Ops Oversight) */}
         {activeTab === 'incidents' && isAdmin && (
           <AdminConsole
             currentUser={currentUser}
@@ -317,6 +399,7 @@ export function App() {
             equipment={equipment}
             timetable={timetable}
             analytics={analytics}
+            activeSubTab="incidents"
             onSelectIncident={setSelectedIncident}
             onRefresh={refreshAll}
             onError={showError}
@@ -324,22 +407,30 @@ export function App() {
           />
         )}
 
-        {/* Tab 4: WORK ORDERS (Technician & Admin) */}
+        {/* Tab 5: WORK ORDERS (Technician & Admin) */}
         {activeTab === 'work_orders' && (
           isTechnician ? (
             <TechnicianPortal
               currentUser={currentUser}
               incidents={incidents}
               technicians={technicians}
+              activeTab="work_orders"
+              onNavigateTab={setActiveTab}
               onSelectIncident={setSelectedIncident}
               onRefresh={refreshAll}
               onError={showError}
               onSuccess={showSuccess}
             />
           ) : (
-            <WorkOrdersView
-              incidents={incidents}
+            <AdminConsole
               currentUser={currentUser}
+              incidents={incidents}
+              technicians={technicians}
+              rooms={rooms}
+              equipment={equipment}
+              timetable={timetable}
+              analytics={analytics}
+              activeSubTab="work_orders"
               onSelectIncident={setSelectedIncident}
               onRefresh={refreshAll}
               onError={showError}
@@ -348,8 +439,8 @@ export function App() {
           )
         )}
 
-        {/* Tab 5: CAMPUS RESOURCES & TIMETABLE (Admin) */}
-        {(activeTab === 'resources' || activeTab === 'timetable') && isAdmin && (
+        {/* Tab 6: CAMPUS RESOURCES & SPACES */}
+        {activeTab === 'resources' && isAdmin && (
           <AdminConsole
             currentUser={currentUser}
             incidents={incidents}
@@ -358,6 +449,7 @@ export function App() {
             equipment={equipment}
             timetable={timetable}
             analytics={analytics}
+            activeSubTab="resources"
             onSelectIncident={setSelectedIncident}
             onRefresh={refreshAll}
             onError={showError}
@@ -365,7 +457,43 @@ export function App() {
           />
         )}
 
-        {/* Tab 6: AGENT TELEMETRY (Admin) */}
+        {/* Tab 7: USER ROSTER & RBAC MANAGEMENT */}
+        {activeTab === 'users' && (isSuperAdmin || isOpsHead || isAdmin) && (
+          <AdminConsole
+            currentUser={currentUser}
+            incidents={incidents}
+            technicians={technicians}
+            rooms={rooms}
+            equipment={equipment}
+            timetable={timetable}
+            analytics={analytics}
+            activeSubTab="users"
+            onSelectIncident={setSelectedIncident}
+            onRefresh={refreshAll}
+            onError={showError}
+            onSuccess={showSuccess}
+          />
+        )}
+
+        {/* Tab 8: REFERENCE TIMETABLE */}
+        {activeTab === 'timetable' && isAdmin && (
+          <AdminConsole
+            currentUser={currentUser}
+            incidents={incidents}
+            technicians={technicians}
+            rooms={rooms}
+            equipment={equipment}
+            timetable={timetable}
+            analytics={analytics}
+            activeSubTab="timetable"
+            onSelectIncident={setSelectedIncident}
+            onRefresh={refreshAll}
+            onError={showError}
+            onSuccess={showSuccess}
+          />
+        )}
+
+        {/* Tab 9: AGENT TELEMETRY */}
         {activeTab === 'agent_runs' && isAdmin && (
           <AdminConsole
             currentUser={currentUser}
@@ -375,11 +503,28 @@ export function App() {
             equipment={equipment}
             timetable={timetable}
             analytics={analytics}
+            activeSubTab="agent_runs"
             onSelectIncident={setSelectedIncident}
             onRefresh={refreshAll}
             onError={showError}
             onSuccess={showSuccess}
           />
+        )}
+
+        {/* Tab 10: USER PROFILE & SECURITY */}
+        {activeTab === 'profile' && (
+          <ProfilePage
+            currentUser={currentUser}
+            onUpdateUser={setCurrentUser}
+            onBackToApp={() => setActiveTab('dashboard')}
+            onError={showError}
+            onSuccess={showSuccess}
+          />
+        )}
+
+        {/* Fallback 404 for unknown tab */}
+        {!['about', 'dashboard', 'my_issues', 'report_issue', 'incidents', 'work_orders', 'resources', 'users', 'timetable', 'agent_runs', 'profile'].includes(activeTab) && (
+          <NotFoundPage onBackToDashboard={() => setActiveTab('dashboard')} />
         )}
 
       </main>

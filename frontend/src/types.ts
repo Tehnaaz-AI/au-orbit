@@ -1,4 +1,4 @@
-export type Role = 'STUDENT' | 'FACULTY' | 'TECHNICIAN' | 'ADMIN' | 'UNIVERSITY_ADMIN' | 'SUPER_ADMIN';
+export type Role = 'STUDENT' | 'FACULTY' | 'TECHNICIAN' | 'OPERATIONAL_HEAD' | 'ADMIN' | 'UNIVERSITY_ADMIN' | 'SUPER_ADMIN';
 
 export interface Organization {
   id: number;
@@ -19,6 +19,7 @@ export interface User {
   specialty?: string | null;
   phone?: string | null;
   avatar_color?: string;
+  is_active?: boolean;
   created_at: string;
 }
 
@@ -59,6 +60,7 @@ export interface WorkOrderItem {
   technician_id?: number | null;
   scheduled_for?: string | null;
   started_at?: string | null;
+  resolution_media?: string[];
   notes?: string | null;
 }
 
@@ -120,6 +122,7 @@ export interface Incident {
   category: string;
   priority: 'EMERGENCY' | 'HIGH' | 'NORMAL' | 'LOW';
   status: 'REPORTED' | 'UNDERSTOOD' | 'PRIORITIZED' | 'ASSIGNED' | 'SCHEDULED' | 'IN_PROGRESS' | 'AWAITING_VERIFICATION' | 'RESOLVED' | 'REOPENED' | 'REPLANNING' | 'CLOSED';
+  media_urls?: string[];
   replan_count: number;
   created_at: string;
   resolution?: string | null;

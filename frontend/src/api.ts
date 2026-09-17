@@ -64,7 +64,7 @@ export const api = {
   // Incidents
   getIncidents: () => request<Incident[]>('/incidents'),
   getIncident: (id: number) => request<Incident>(`/incidents/${id}`),
-  reportIncident: (data: { reporter: string; description: string; room_code?: string | null }) =>
+  reportIncident: (data: { reporter: string; description: string; room_code?: string | null; media_urls?: string[] }) =>
     request<Incident>('/incidents', {
       method: 'POST',
       body: JSON.stringify(data)
@@ -84,11 +84,33 @@ export const api = {
   workOrderAction: (
     workId: number,
     action: string,
-    payload?: { outcome?: string; notes?: string; technician_id?: number }
+    payload?: { outcome?: string; notes?: string; technician_id?: number; resolution_media?: string[] }
   ) =>
     request<Incident>(`/work-orders/${workId}/action`, {
       method: 'POST',
       body: JSON.stringify({ action, ...payload })
+    }),
+  reassignWorkOrder: (workId: number, technician_id: number, notes?: string) =>
+    request<Incident>(`/work-orders/${workId}/reassign`, {
+      method: 'POST',
+      body: JSON.stringify({ technician_id, notes })
+    }),
+
+  // User Management & Governance
+  getUsers: () => request<User[]>('/users'),
+  createUser: (data: { email: string; password: string; full_name: string; role: string; department?: string; specialty?: string; phone?: string; organization_id?: number }) =>
+    request<User>('/users', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+  updateUser: (id: number, data: Partial<User>) =>
+    request<User>(`/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    }),
+  deleteUser: (id: number) =>
+    request<{ message: string }>(`/users/${id}`, {
+      method: 'DELETE'
     }),
 
   // Technicians
@@ -108,6 +130,11 @@ export const api = {
     const qs = params.toString();
     return request<Room[]>(`/rooms${qs ? `?${qs}` : ''}`);
   },
+  updateRoomAvailability: (code: string, status: string) =>
+    request<{ code: string; availability: string }>(`/rooms/${code}/availability`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status })
+    }),
   getRoomEquipment: (code: string) => request<Equipment[]>(`/rooms/${code}/equipment`),
 
   // Equipment Management
@@ -194,11 +221,17 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data)
     }),
-  login: (data: { email: string; password: string }) =>
+    login: (data: { email: string; password: string }) =>
     request<AuthResponse>('/auth/login', {
       method: 'POST',
       body: JSON.stringify(data)
     }),
-  getMe: () => request<User>('/auth/me')
+  getMe: () => request<User>('/auth/me'),
+  updateProfile: (data: { full_name?: string; department?: string; specialty?: string; phone?: string; current_password?: string; new_password?: string }) =>
+    request<User>('/auth/profile', {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    })
 };
+
 

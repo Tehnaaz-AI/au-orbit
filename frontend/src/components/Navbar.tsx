@@ -3,8 +3,6 @@ import { motion } from 'framer-motion';
 import { Role, User } from '../types';
 import { 
   LogOut, 
-  Activity, 
-  Zap,
   LayoutDashboard,
   ClipboardList,
   Wrench,
@@ -12,7 +10,10 @@ import {
   Layers,
   PlusCircle,
   Building2,
-  ArrowRight
+  Cpu,
+  ArrowRight,
+  Users,
+  User as UserIcon
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -52,7 +53,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   // 1. Public Visitor Navbar
   if (!currentUser) {
     return (
-      <header className="navbar" style={{ backdropFilter: 'blur(12px)', background: 'rgba(251, 249, 243, 0.92)' }}>
+      <header className="navbar">
         <a 
           href="/" 
           className="navbar-brand" 
@@ -62,8 +63,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
         >
-          <motion.div whileHover={{ rotate: 8, scale: 1.08 }} className="navbar-brand-mark">AU</motion.div>
-          <span>AUOrbit</span>
+          <img src="/logo.png" alt="AUOrbit" style={{ height: 30, objectFit: 'contain' }} />
         </a>
 
         <nav aria-label="Main Navigation">
@@ -109,8 +109,8 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
           <motion.button 
-            whileHover={{ scale: 1.04, y: -1 }}
-            whileTap={{ scale: 0.96 }}
+            whileHover={{ scale: 1.03, y: -1 }}
+            whileTap={{ scale: 0.97 }}
             type="button"
             className="btn btn-secondary btn-sm" 
             onClick={onSignIn}
@@ -118,8 +118,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             Sign In
           </motion.button>
           <motion.button 
-            whileHover={{ scale: 1.04, y: -1, boxShadow: '0 6px 16px rgba(227, 83, 54, 0.25)' }}
-            whileTap={{ scale: 0.96 }}
+            whileHover={{ scale: 1.03, y: -1 }}
+            whileTap={{ scale: 0.97 }}
             type="button"
             className="btn btn-primary btn-sm" 
             onClick={onGetStarted}
@@ -131,25 +131,18 @@ export const Navbar: React.FC<NavbarProps> = ({
     );
   }
 
-  // 2. Authenticated Role-Specific Navbar
-  const roleDisplayNames: Record<Role, string> = {
-    STUDENT: 'Student',
-    FACULTY: 'Faculty Member',
-    TECHNICIAN: 'Operational Specialist',
-    ADMIN: 'Administrator',
-    UNIVERSITY_ADMIN: 'University Admin',
-    SUPER_ADMIN: 'Super Administrator'
-  };
-
+  // 2. Authenticated Role-Specific Navbar (About link is strictly in Footer only)
   const isStudent = currentUser.role === 'STUDENT';
   const isFaculty = currentUser.role === 'FACULTY';
   const isTechnician = currentUser.role === 'TECHNICIAN';
-  const isAdmin = ['ADMIN', 'UNIVERSITY_ADMIN', 'SUPER_ADMIN'].includes(currentUser.role);
+  const isOpsHead = currentUser.role === 'OPERATIONAL_HEAD';
+  const isSuperAdmin = currentUser.role === 'SUPER_ADMIN';
+  const isAdmin = ['ADMIN', 'UNIVERSITY_ADMIN', 'SUPER_ADMIN', 'OPERATIONAL_HEAD'].includes(currentUser.role);
 
   return (
     <header className="navbar">
-      {/* Brand & Role-Specific Navigation Tabs */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+      {/* Brand & Canonical Navigation Tabs */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
         <a 
           href="/" 
           className="navbar-brand" 
@@ -158,127 +151,121 @@ export const Navbar: React.FC<NavbarProps> = ({
             if (onSelectTab) onSelectTab('dashboard'); 
           }}
         >
-          <motion.div whileHover={{ rotate: 8, scale: 1.08 }} className="navbar-brand-mark">AU</motion.div>
-          <span>AUOrbit</span>
+          <img src="/logo.png" alt="AUOrbit" style={{ height: 30, objectFit: 'contain' }} />
         </a>
 
         <nav aria-label="Role Navigation">
           <ul className="nav-links">
             {/* Overview / Dashboard (All Roles) */}
             <li>
-              <motion.button 
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+              <button 
                 type="button"
                 className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
                 onClick={() => onSelectTab && onSelectTab('dashboard')}
               >
                 <LayoutDashboard size={14} /> Overview
-              </motion.button>
+              </button>
             </li>
 
-            {/* Student & Faculty: My Issues */}
+            {/* Student & Faculty: Issues View */}
             {(isStudent || isFaculty) && (
               <li>
-                <motion.button 
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                <button 
                   type="button"
                   className={`nav-item ${activeTab === 'my_issues' ? 'active' : ''}`}
                   onClick={() => onSelectTab && onSelectTab('my_issues')}
                 >
                   <ClipboardList size={14} /> {isStudent ? 'My Issues' : 'Classroom & Dept Issues'}
-                </motion.button>
+                </button>
               </li>
             )}
 
-            {/* Student & Faculty: Report Issue */}
+            {/* Student & Faculty: Report Issue (Action Form) */}
             {(isStudent || isFaculty) && (
               <li>
-                <motion.button 
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                <button 
                   type="button"
                   className={`nav-item ${activeTab === 'report_issue' ? 'active' : ''}`}
                   onClick={() => onSelectTab && onSelectTab('report_issue')}
                 >
                   <PlusCircle size={14} /> Report Issue
-                </motion.button>
+                </button>
               </li>
             )}
 
-            {/* Technician: Assigned Work */}
+            {/* Technician: Assigned Work Queue */}
             {isTechnician && (
               <li>
-                <motion.button 
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                <button 
                   type="button"
                   className={`nav-item ${activeTab === 'work_orders' ? 'active' : ''}`}
                   onClick={() => onSelectTab && onSelectTab('work_orders')}
                 >
-                  <Wrench size={14} /> Assigned Work
-                </motion.button>
+                  <Wrench size={14} /> Assigned Work Queue
+                </button>
               </li>
             )}
 
-            {/* Admin / Super Admin: Full Operational Navigation */}
+            {/* Admin / Super Admin / Ops Head: Canonical Operations Tabs */}
             {isAdmin && (
               <>
                 <li>
-                  <motion.button 
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                  <button 
                     type="button"
                     className={`nav-item ${activeTab === 'incidents' ? 'active' : ''}`}
                     onClick={() => onSelectTab && onSelectTab('incidents')}
                   >
                     <ClipboardList size={14} /> Incidents
-                  </motion.button>
+                  </button>
                 </li>
                 <li>
-                  <motion.button 
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                  <button 
                     type="button"
                     className={`nav-item ${activeTab === 'work_orders' ? 'active' : ''}`}
                     onClick={() => onSelectTab && onSelectTab('work_orders')}
                   >
                     <Wrench size={14} /> Work Orders
-                  </motion.button>
+                  </button>
                 </li>
                 <li>
-                  <motion.button 
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                  <button 
                     type="button"
                     className={`nav-item ${activeTab === 'resources' ? 'active' : ''}`}
                     onClick={() => onSelectTab && onSelectTab('resources')}
                   >
-                    <Building2 size={14} /> Campus Resources
-                  </motion.button>
+                    <Building2 size={14} /> Campus Spaces
+                  </button>
                 </li>
+
+                {(isSuperAdmin || isOpsHead) && (
+                  <li>
+                    <button 
+                      type="button"
+                      className={`nav-item ${activeTab === 'users' ? 'active' : ''}`}
+                      onClick={() => onSelectTab && onSelectTab('users')}
+                    >
+                      <Users size={14} /> User Roster
+                    </button>
+                  </li>
+                )}
+
                 <li>
-                  <motion.button 
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                  <button 
                     type="button"
                     className={`nav-item ${activeTab === 'timetable' ? 'active' : ''}`}
                     onClick={() => onSelectTab && onSelectTab('timetable')}
                   >
-                    <Calendar size={14} /> Reference Timetable
-                  </motion.button>
+                    <Calendar size={14} /> Timetable
+                  </button>
                 </li>
                 <li>
-                  <motion.button 
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                  <button 
                     type="button"
                     className={`nav-item ${activeTab === 'agent_runs' ? 'active' : ''}`}
                     onClick={() => onSelectTab && onSelectTab('agent_runs')}
                   >
-                    <Layers size={14} /> Agent Telemetry
-                  </motion.button>
+                    <Cpu size={14} /> Telemetry
+                  </button>
                 </li>
               </>
             )}
@@ -286,67 +273,71 @@ export const Navbar: React.FC<NavbarProps> = ({
         </nav>
       </div>
 
-      {/* Right Controls & User Profile */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-        
-        {/* Live Operational Counters */}
-        {emergencyCount > 0 && (
-          <span className="badge badge-emergency">
-            <Zap size={11} /> {emergencyCount} Emergency
-          </span>
+      {/* Right User Bar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+        {activeIncidentsCount > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <span className="badge badge-neutral" style={{ fontSize: '0.75rem' }}>
+              {activeIncidentsCount} Active
+            </span>
+            {emergencyCount > 0 && (
+              <span className="badge badge-danger" style={{ fontSize: '0.75rem' }}>
+                {emergencyCount} Urgent
+              </span>
+            )}
+          </div>
         )}
-        <span className="badge badge-neutral">
-          <Activity size={11} color="var(--color-primary)" /> {activeIncidentsCount} Active
-        </span>
 
-        {/* User Profile Badge */}
-        <motion.div 
-          whileHover={{ scale: 1.02 }}
-          style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '0.55rem',
-            padding: '0.3rem 0.65rem',
-            background: 'var(--bg-surface)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: 'var(--radius-sm)'
-          }}
-        >
-          <div style={{ 
-            width: 24, 
-            height: 24, 
-            borderRadius: '50%', 
-            background: 'var(--color-primary)', 
-            color: '#FFFFFF',
-            fontWeight: 800,
-            fontSize: '0.72rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            {currentUser.full_name ? currentUser.full_name.charAt(0).toUpperCase() : 'U'}
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)' }}>
-              {currentUser.full_name}
-            </span>
-            <span style={{ fontSize: '0.66rem', color: 'var(--text-muted)' }}>
-              {roleDisplayNames[currentUser.role] || currentUser.role}
-            </span>
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+          <button
+            type="button"
+            onClick={() => onSelectTab && onSelectTab('profile')}
+            className={`btn btn-sm ${activeTab === 'profile' ? 'btn-primary' : 'btn-ghost'}`}
+            title="Edit Profile & Account Settings"
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.45rem', 
+              padding: '0.3rem 0.6rem',
+              borderRadius: 'var(--radius-full)',
+              border: activeTab === 'profile' ? '1px solid var(--color-primary)' : '1px solid var(--border-subtle)'
+            }}
+          >
+            <div style={{
+              width: 22,
+              height: 22,
+              borderRadius: '50%',
+              background: 'var(--color-primary)',
+              color: '#FFFFFF',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '0.72rem',
+              fontWeight: 800
+            }}>
+              {currentUser.full_name ? currentUser.full_name.charAt(0).toUpperCase() : 'U'}
+            </div>
+            <div style={{ textAlign: 'left', lineHeight: 1.15 }}>
+              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                {currentUser.full_name.split(' ')[0]}
+              </div>
+              <div style={{ fontSize: '0.66rem', color: 'var(--color-primary-dark)', fontWeight: 600 }}>
+                {currentUser.role.replace('_', ' ')}
+              </div>
+            </div>
+          </button>
 
           <button
             type="button"
-            className="btn-ghost btn-sm"
+            className="btn btn-secondary btn-sm"
             onClick={onLogout}
             title="Sign Out"
-            style={{ padding: '0.15rem 0.35rem', color: 'var(--status-error-text)' }}
+            style={{ padding: '0.35rem 0.55rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
           >
             <LogOut size={13} />
+            <span style={{ fontSize: '0.78rem' }}>Sign Out</span>
           </button>
-        </motion.div>
-
+        </div>
       </div>
     </header>
   );

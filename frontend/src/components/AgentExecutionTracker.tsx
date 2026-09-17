@@ -7,7 +7,25 @@ import {
   Radio, 
   Code, 
   Check, 
-  X
+  X,
+  Play,
+  Pause,
+  RotateCcw,
+  FastForward,
+  Cpu,
+  Sparkles,
+  MapPin,
+  Flame,
+  Wrench,
+  Calendar,
+  Activity,
+  Shield,
+  RefreshCw,
+  Terminal,
+  CheckCircle2,
+  AlertTriangle,
+  Zap,
+  Layers
 } from 'lucide-react';
 
 interface AgentExecutionTrackerProps {
@@ -15,10 +33,36 @@ interface AgentExecutionTrackerProps {
   compact?: boolean;
 }
 
+interface AgentStage {
+  id: string;
+  name: string;
+  role: string;
+  icon: React.ReactNode;
+  description: string;
+  detailKey?: string;
+}
+
+const AGENT_STAGES: AgentStage[] = [
+  { id: 'intake', name: 'Problem Intake', role: 'Multimodal Ingestion', icon: <Sparkles size={16} />, description: 'Ingests reported complaint and photo/video attachments.' },
+  { id: 'understanding', name: 'Understanding Agent', role: 'Entity & Intent Parser', icon: <Cpu size={16} />, description: 'Extracts spatial coordinates, problem category, and failure signals.' },
+  { id: 'context', name: 'Context Agent', role: 'Spatial & Timetable Resolver', icon: <MapPin size={16} />, description: 'Cross-checks room inventory, active courses, and equipment state.' },
+  { id: 'prioritization', name: 'Prioritization Agent', role: 'Urgency Escalator', icon: <Flame size={16} />, description: 'Escalates priority to Emergency or High if lectures/exams are impacted.' },
+  { id: 'resource', name: 'Resource Agent', role: 'Specialist Matcher', icon: <Wrench size={16} />, description: 'Scores and selects qualified technicians based on historical capability.' },
+  { id: 'scheduling', name: 'Scheduling Agent', role: 'Slot Allocator', icon: <Calendar size={16} />, description: 'Books non-conflicting maintenance window adhering to policy.' },
+  { id: 'execution', name: 'Execution Agent', role: 'Field Dispatch Orchestrator', icon: <Activity size={16} />, description: 'Dispatches work order, tracks technician actions, and receives repair proof.' },
+  { id: 'verification', name: 'Verification Agent', role: 'Physical Audit Sign-Off', icon: <Shield size={16} />, description: 'Audits visual Before/After evidence and verifies restored space readiness.' },
+  { id: 'replanning', name: 'Replanning Agent', role: 'Self-Healing Recovery', icon: <RefreshCw size={16} />, description: 'Autonomously re-evaluates and excludes failed resources if verification fails.' }
+];
+
 export const AgentExecutionTracker: React.FC<AgentExecutionTrackerProps> = ({ incident, compact = false }) => {
   const [events, setEvents] = useState<AgentEvent[]>(incident.events || []);
   const [selectedEventDetails, setSelectedEventDetails] = useState<AgentEvent | null>(null);
   const [showTechnicalDrawer, setShowTechnicalDrawer] = useState(false);
+
+  // Simulation Mode State
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [simStep, setSimStep] = useState(0);
+  const [simSpeed, setSimSpeed] = useState<number>(1800); // ms per step
 
   // Sync with incident updates
   useEffect(() => {
@@ -51,368 +95,347 @@ export const AgentExecutionTracker: React.FC<AgentExecutionTrackerProps> = ({ in
     };
   }, [incident.id]);
 
-  const runs: AgentRun[] = incident.runs || [];
+  // Simulation Timer
+  useEffect(() => {
+    let timer: any = null;
+    if (isSimulating) {
+      timer = setInterval(() => {
+        setSimStep(prev => {
+          if (prev >= AGENT_STAGES.length - 1) {
+            setIsSimulating(false);
+            return prev;
+          }
+          return prev + 1;
+        });
+      }, simSpeed);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [isSimulating, simSpeed]);
 
-  // Group authentic events by AgentRun
+  const runs: AgentRun[] = incident.runs || [];
   const run1Events = events.filter(e => e.agent_run_id === (runs[0]?.id || 1) || (!e.agent_run_id && runs.length <= 1));
   const run2Events = runs.length > 1 ? events.filter(e => e.agent_run_id === runs[1]?.id) : [];
 
-  const hasReplanning = (incident.replan_count || 0) > 0 || incident.status === 'REPLANNING' || events.some(e => e.agent === 'Replanning Agent');
-
-  const formatEventDetail = (evt: AgentEvent): string => {
-    if (typeof evt.detail === 'string') return evt.detail;
-    if (evt.detail && typeof evt.detail === 'object') {
-      if (evt.detail.notes) return String(evt.detail.notes);
-      if (evt.detail.reason) return String(evt.detail.reason);
-      if (evt.detail.message) return String(evt.detail.message);
-      if (evt.detail.decision_reason) return String(evt.detail.decision_reason);
-      return JSON.stringify(evt.detail).slice(0, 100);
-    }
-    return evt.action || 'Agent execution step recorded';
-  };
+  const currentStageIndex = isSimulating 
+    ? simStep 
+    : incident.status === 'RESOLVED' || incident.status === 'CLOSED'
+    ? 7
+    : incident.status === 'AWAITING_VERIFICATION'
+    ? 7
+    : incident.status === 'IN_PROGRESS'
+    ? 6
+    : incident.status === 'SCHEDULED'
+    ? 5
+    : incident.status === 'ASSIGNED'
+    ? 4
+    : incident.status === 'PRIORITIZED'
+    ? 3
+    : incident.status === 'UNDERSTOOD'
+    ? 1
+    : incident.status === 'REPLANNING' || (incident.replan_count > 0)
+    ? 8
+    : 0;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       
-      {/* Tracker Status Bar */}
+      {/* 1. Simulation Control & Live Stream Bar */}
       <div style={{ 
         display: 'flex', 
         alignItems: 'center', 
         justifyContent: 'space-between', 
-        padding: '0.65rem 0.85rem',
-        background: 'var(--bg-surface)',
+        padding: '0.85rem 1.15rem',
+        background: 'linear-gradient(135deg, #FFFDF9 0%, #FFF2E8 100%)',
         border: '1px solid var(--border-subtle)',
-        borderRadius: 'var(--radius-sm)',
+        borderLeft: '4px solid var(--color-primary)',
+        borderRadius: 'var(--radius-md)',
         flexWrap: 'wrap',
-        gap: '0.5rem'
+        gap: '0.75rem',
+        boxShadow: 'var(--shadow-sm)'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span className="pulse-dot" />
-          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)' }}>
-            Autonomous Execution Pipeline
-          </span>
-          <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-            ({events.length} {events.length === 1 ? 'event' : 'events'} recorded)
-          </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <span className="pulse-dot" style={{ backgroundColor: 'var(--color-primary)' }} />
+          <div>
+            <div style={{ fontSize: '0.92rem', fontWeight: 800, color: 'var(--text-main)', fontFamily: 'var(--font-heading)' }}>
+              Autonomous 9-Agent Simulation & Live Telemetry
+            </div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              Active Incident #{incident.id} · Priority: <b>{incident.priority}</b> · Status: <b>{incident.status}</b>
+            </div>
+          </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-          <span className="badge badge-neutral" style={{ fontSize: '0.68rem' }}>
-            <Radio size={10} color="var(--color-primary)" />
-            <span>SSE Live Stream</span>
-          </span>
+        {/* Simulation Controls */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            className={`btn btn-sm ${isSimulating ? 'btn-danger' : 'btn-primary'}`}
+            onClick={() => {
+              if (isSimulating) {
+                setIsSimulating(false);
+              } else {
+                if (simStep >= AGENT_STAGES.length - 1) setSimStep(0);
+                setIsSimulating(true);
+              }
+            }}
+            style={{ fontSize: '0.76rem', padding: '0.3rem 0.7rem' }}
+          >
+            {isSimulating ? <Pause size={13} /> : <Play size={13} />}
+            {isSimulating ? 'Pause Simulation' : 'Run Simulation'}
+          </button>
+
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={() => setSimStep(prev => (prev < AGENT_STAGES.length - 1 ? prev + 1 : 0))}
+            style={{ fontSize: '0.76rem', padding: '0.3rem 0.6rem' }}
+            title="Step Forward"
+          >
+            <FastForward size={13} /> Step
+          </button>
+
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={() => {
+              setIsSimulating(false);
+              setSimStep(0);
+            }}
+            style={{ fontSize: '0.76rem', padding: '0.3rem 0.6rem' }}
+            title="Reset Simulation"
+          >
+            <RotateCcw size={13} /> Reset
+          </button>
+
           {events.length > 0 && (
-            <motion.button
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.96 }}
+            <button
               type="button"
               className="btn btn-secondary btn-sm"
-              style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem' }}
               onClick={() => {
                 setSelectedEventDetails(events[events.length - 1]);
                 setShowTechnicalDrawer(true);
               }}
+              style={{ fontSize: '0.76rem', padding: '0.3rem 0.6rem' }}
             >
-              <Code size={12} /> View Technical Details
-            </motion.button>
+              <Code size={13} /> Technical Logs
+            </button>
           )}
         </div>
       </div>
 
-      {/* Vertical Operational Execution Timeline */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-        
-        {/* RUN #1 Section */}
-        <div style={{ 
-          background: '#FFFFFF', 
-          border: '1px solid var(--border-subtle)', 
-          borderRadius: 'var(--radius-sm)', 
-          padding: '1rem' 
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.5rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-              <span className="badge badge-role mono" style={{ fontSize: '0.72rem' }}>RUN 01</span>
-              <span style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-main)' }}>Initial Autonomous Workflow</span>
-            </div>
-            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-              {runs[0]?.trigger_reason || 'Initial Dispatch'}
-            </span>
-          </div>
+      {/* 2. Visual 9-Agent Orbital Simulation Flow */}
+      <div className="card" style={{ padding: '1.25rem', borderTop: '3px solid var(--color-primary)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <span style={{ fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--primary-dark)', fontFamily: 'var(--font-heading)' }}>
+            Autonomous Coordination Pipeline
+          </span>
+          <span className="badge badge-role mono" style={{ fontSize: '0.72rem' }}>
+            Stage {currentStageIndex + 1} of 9: {AGENT_STAGES[currentStageIndex].name}
+          </span>
+        </div>
 
+        {/* 9-Node Interactive Rail */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(105px, 1fr))', gap: '0.5rem', position: 'relative' }}>
+          {AGENT_STAGES.map((st, idx) => {
+            const isCompleted = idx < currentStageIndex;
+            const isCurrent = idx === currentStageIndex;
+            return (
+              <motion.div
+                key={st.id}
+                whileHover={{ y: -3 }}
+                onClick={() => setSimStep(idx)}
+                style={{
+                  padding: '0.75rem 0.45rem',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid',
+                  borderColor: isCurrent ? 'var(--color-primary)' : isCompleted ? 'var(--status-success-border)' : 'var(--border-subtle)',
+                  background: isCurrent ? 'linear-gradient(180deg, #FFF0E6 0%, #FFE5D4 100%)' : isCompleted ? 'var(--status-success-bg)' : 'var(--bg-surface)',
+                  color: isCurrent ? 'var(--color-primary-dark)' : isCompleted ? 'var(--status-success-text)' : 'var(--text-muted)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  cursor: 'pointer',
+                  position: 'relative',
+                  boxShadow: isCurrent ? '0 4px 14px rgba(227, 83, 54, 0.25)' : 'none',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                {/* Glowing Active Ring Animation */}
+                {isCurrent && (
+                  <motion.div
+                    animate={{ scale: [1, 1.15, 1], opacity: [0.6, 0, 0.6] }}
+                    transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+                    style={{
+                      position: 'absolute',
+                      inset: -3,
+                      borderRadius: 'var(--radius-sm)',
+                      border: '2px solid var(--color-primary)',
+                      pointerEvents: 'none'
+                    }}
+                  />
+                )}
+
+                <div style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: '50%',
+                  background: isCurrent ? 'var(--color-primary)' : isCompleted ? 'var(--status-success-text)' : 'var(--bg-card)',
+                  color: isCurrent || isCompleted ? '#FFFFFF' : 'var(--text-dim)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '0.72rem',
+                  fontWeight: 800
+                }}>
+                  {isCompleted ? <Check size={14} /> : st.icon}
+                </div>
+
+                <div style={{ textAlign: 'center', width: '100%' }}>
+                  <div style={{ fontSize: '0.66rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.02em', color: isCurrent ? 'var(--color-primary)' : 'inherit' }}>
+                    0{idx + 1}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: 'var(--font-heading)' }}>
+                    {st.name.split(' ')[0]}
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+
+        {/* Active Stage Detailed Simulation Card */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentStageIndex}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.22 }}
+            style={{
+              marginTop: '1.25rem',
+              padding: '1.15rem',
+              background: 'linear-gradient(135deg, #FFFDF9 0%, #FFF3EA 100%)',
+              borderRadius: 'var(--radius-sm)',
+              border: '1px solid var(--border-subtle)',
+              borderLeft: '4px solid var(--color-primary)'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.85rem' }}>
+              <div style={{
+                width: 42,
+                height: 42,
+                borderRadius: '8px',
+                background: 'var(--color-primary-subtle)',
+                color: 'var(--color-primary)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                {AGENT_STAGES[currentStageIndex].icon}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
+                  <span style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-main)', fontFamily: 'var(--font-heading)' }}>
+                    {AGENT_STAGES[currentStageIndex].name}
+                  </span>
+                  <span className="badge badge-role" style={{ fontSize: '0.68rem' }}>
+                    {AGENT_STAGES[currentStageIndex].role}
+                  </span>
+                </div>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-body)', margin: '0.2rem 0 0.5rem', lineHeight: 1.5 }}>
+                  {AGENT_STAGES[currentStageIndex].description}
+                </p>
+
+                {/* Simulation Rationale Context */}
+                <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                  <span>Location Target: <b>{incident.room_code || 'Campus Space'}</b></span>
+                  <span>Category: <b>{incident.category || 'Hardware/AV'}</b></span>
+                  <span>Assigned Tech: <b>{incident.work_order?.technician || 'Allocating...'}</b></span>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      {/* 3. Real-Time Monospace Terminal Log Stream */}
+      <div style={{
+        background: '#1D1411',
+        color: '#FFB899',
+        borderRadius: 'var(--radius-md)',
+        border: '1px solid #4A2B20',
+        padding: '1rem',
+        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25)',
+        fontFamily: 'var(--font-mono)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #382118', paddingBottom: '0.5rem', marginBottom: '0.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.78rem', color: '#FF9E6C', fontWeight: 700 }}>
+            <Terminal size={14} color="var(--color-primary)" />
+            <span>AUOrbit Autonomous Telemetry Stream</span>
+          </div>
+          <span style={{ fontSize: '0.7rem', color: '#A87A68' }}>
+            Event Log ({events.length} records)
+          </span>
+        </div>
+
+        <div style={{ maxHeight: '180px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.78rem', paddingRight: '0.3rem' }}>
           {events.length === 0 ? (
-            <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
-              Agents are initiating pipeline execution...
+            <div style={{ color: '#8A6858', fontStyle: 'italic' }}>
+              [SYSTEM] Initializing multi-agent event stream for Incident #{incident.id}...
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', position: 'relative', paddingLeft: '1.5rem' }}>
-              {/* Vertical connecting line */}
-              <div style={{ position: 'absolute', left: '7px', top: '10px', bottom: '10px', width: '2px', background: 'var(--border-default)', zIndex: 0 }} />
-
-              <AnimatePresence>
-                {run1Events.map((evt, idx) => {
-                  const isFailed = evt.status === 'FAILED' || evt.action.toLowerCase().includes('fail') || (evt.detail && evt.detail.outcome === 'fail');
-                  const isLast = idx === run1Events.length - 1 && !hasReplanning;
-
-                  return (
-                    <motion.div 
-                      key={evt.id || idx}
-                      initial={{ opacity: 0, x: -8 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.25 }}
-                      style={{ position: 'relative', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem', zIndex: 1 }}
-                    >
-                      {/* Node marker */}
-                      <div style={{ 
-                        position: 'absolute', 
-                        left: '-1.5rem', 
-                        top: '2px', 
-                        width: '16px', 
-                        height: '16px', 
-                        borderRadius: '50%', 
-                        background: isFailed ? 'var(--status-error-text)' : isLast ? 'var(--color-primary)' : '#FFFFFF', 
-                        border: `2px solid ${isFailed ? 'var(--status-error-text)' : isLast ? 'var(--color-primary)' : 'var(--border-default)'}`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: isFailed || isLast ? '#FFFFFF' : 'var(--text-muted)'
-                      }}>
-                        {isFailed ? <X size={10} /> : isLast ? <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#FFF' }} /> : <Check size={10} color="var(--status-success-text)" />}
-                      </div>
-
-                      {/* Content */}
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: isFailed ? 'var(--status-error-text)' : 'var(--text-main)' }}>
-                            {evt.agent}
-                          </span>
-                          <span className="badge badge-neutral" style={{ fontSize: '0.65rem' }}>
-                            {evt.action}
-                          </span>
-                        </div>
-
-                        <div style={{ fontSize: '0.78rem', color: 'var(--text-body)', marginTop: '0.15rem' }}>
-                          {formatEventDetail(evt)}
-                        </div>
-                      </div>
-
-                      {/* Timestamp & Drawer Trigger */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>
-                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                          {evt.created_at ? new Date(evt.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : ''}
-                        </span>
-                        <motion.button
-                          whileHover={{ scale: 1.15 }}
-                          type="button"
-                          className="btn-ghost btn-sm"
-                          style={{ padding: '0.15rem', color: 'var(--text-dim)' }}
-                          onClick={() => {
-                            setSelectedEventDetails(evt);
-                            setShowTechnicalDrawer(true);
-                          }}
-                          title="View payload"
-                        >
-                          <Code size={12} />
-                        </motion.button>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </AnimatePresence>
-            </div>
+            events.map((ev, i) => (
+              <div key={ev.id || i} style={{ display: 'flex', gap: '0.5rem', lineHeight: 1.4 }}>
+                <span style={{ color: '#E35336', flexShrink: 0 }}>[{ev.agent || 'Agent'}]:</span>
+                <span style={{ color: '#F3E5DC' }}>{ev.action}</span>
+                {ev.tool && <span style={{ color: '#FFB380' }}>({ev.tool})</span>}
+              </div>
+            ))
           )}
         </div>
-
-        {/* REPLANNING BRANCH (When Self-Healing Loop Triggers) */}
-        {hasReplanning && (
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.98, y: -4 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            style={{ 
-              background: 'var(--status-replan-bg)', 
-              border: '1px solid var(--status-replan-border)', 
-              borderRadius: 'var(--radius-sm)', 
-              padding: '0.85rem 1rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.5rem'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.84rem', fontWeight: 700, color: 'var(--status-replan-text)' }}>
-              <GitBranch size={16} />
-              <span>Autonomous Self-Healing Loop Triggered (Replan #{incident.replan_count || 1})</span>
-            </div>
-            <p style={{ fontSize: '0.78rem', color: 'var(--text-body)', margin: 0 }}>
-              Verification failure detected in Run #1. Replanning agent updated state machine, reassessed constraints, and allocated alternate specialist for Run #2.
-            </p>
-          </motion.div>
-        )}
-
-        {/* RUN #2 Section (Self-Healing Recovery) */}
-        {runs.length > 1 && (
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35 }}
-            style={{ 
-              background: '#FFFFFF', 
-              border: '1px solid var(--status-success-border)', 
-              borderRadius: 'var(--radius-sm)', 
-              padding: '1rem' 
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.5rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                <span className="badge badge-success mono" style={{ fontSize: '0.72rem' }}>RUN 02</span>
-                <span style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--status-success-text)' }}>Autonomous Recovery & Resolution</span>
-              </div>
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                {runs[1]?.trigger_reason || 'Replanning Recovery'}
-              </span>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', position: 'relative', paddingLeft: '1.5rem' }}>
-              <div style={{ position: 'absolute', left: '7px', top: '10px', bottom: '10px', width: '2px', background: 'var(--status-success-border)', zIndex: 0 }} />
-
-              <AnimatePresence>
-                {run2Events.map((evt, idx) => {
-                  const isLast = idx === run2Events.length - 1;
-
-                  return (
-                    <motion.div 
-                      key={evt.id || idx}
-                      initial={{ opacity: 0, x: -8 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.25 }}
-                      style={{ position: 'relative', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem', zIndex: 1 }}
-                    >
-                      <div style={{ 
-                        position: 'absolute', 
-                        left: '-1.5rem', 
-                        top: '2px', 
-                        width: '16px', 
-                        height: '16px', 
-                        borderRadius: '50%', 
-                        background: isLast && incident.status === 'RESOLVED' ? 'var(--status-success-text)' : '#FFFFFF', 
-                        border: '2px solid var(--status-success-text)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#FFFFFF'
-                      }}>
-                        <Check size={10} color={isLast && incident.status === 'RESOLVED' ? '#FFFFFF' : 'var(--status-success-text)'} />
-                      </div>
-
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--status-success-text)' }}>
-                            {evt.agent}
-                          </span>
-                          <span className="badge badge-neutral" style={{ fontSize: '0.65rem' }}>
-                            {evt.action}
-                          </span>
-                        </div>
-
-                        <div style={{ fontSize: '0.78rem', color: 'var(--text-body)', marginTop: '0.15rem' }}>
-                          {formatEventDetail(evt)}
-                        </div>
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>
-                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                          {evt.created_at ? new Date(evt.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : ''}
-                        </span>
-                        <motion.button
-                          whileHover={{ scale: 1.15 }}
-                          type="button"
-                          className="btn-ghost btn-sm"
-                          style={{ padding: '0.15rem', color: 'var(--text-dim)' }}
-                          onClick={() => {
-                            setSelectedEventDetails(evt);
-                            setShowTechnicalDrawer(true);
-                          }}
-                          title="View payload"
-                        >
-                          <Code size={12} />
-                        </motion.button>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </AnimatePresence>
-            </div>
-          </motion.div>
-        )}
-
       </div>
 
-      {/* Technical Details Modal / Drawer */}
+      {/* Technical Detail Modal */}
       {showTechnicalDrawer && selectedEventDetails && (
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="modal-overlay" 
-          onClick={() => setShowTechnicalDrawer(false)}
-        >
-          <motion.div 
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
-            className="modal-content" 
-            onClick={e => e.stopPropagation()}
-            style={{ maxWidth: '640px' }}
-          >
+        <div className="modal-overlay" onClick={() => setShowTechnicalDrawer(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 650 }}>
             <div className="modal-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Code size={16} color="var(--color-primary)" />
-                <span style={{ fontWeight: 700, fontSize: '0.92rem' }}>
-                  Technical Event Payload · Event #{selectedEventDetails.id || 'N/A'}
+                <Code size={18} color="var(--color-primary)" />
+                <span style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text-main)', fontFamily: 'var(--font-heading)' }}>
+                  Event #{selectedEventDetails.id} Technical Payload
                 </span>
               </div>
-              <button 
-                type="button" 
-                className="btn-ghost btn-sm" 
-                onClick={() => setShowTechnicalDrawer(false)}
-                style={{ padding: '0.25rem' }}
-              >
+              <button type="button" className="btn-ghost btn-sm" onClick={() => setShowTechnicalDrawer(false)}>
                 <X size={16} />
               </button>
             </div>
 
-            <div className="modal-body" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.75rem', fontSize: '0.78rem' }}>
-                <div><b>Agent:</b> {selectedEventDetails.agent}</div>
-                <div><b>Action:</b> {selectedEventDetails.action}</div>
-                <div><b>Tool Call:</b> {selectedEventDetails.tool || 'Autonomous Orchestration'}</div>
-                <div><b>Run ID:</b> #{selectedEventDetails.agent_run_id || 1}</div>
-              </div>
-
-              <div className="form-label" style={{ fontSize: '0.75rem', marginBottom: '0.25rem' }}>Event Detail / Payload:</div>
-              <pre style={{ 
-                background: '#2F2F2F', 
-                color: '#81C784', 
-                padding: '0.75rem', 
-                borderRadius: 'var(--radius-xs)', 
-                fontSize: '0.75rem', 
+            <div className="modal-body">
+              <pre style={{
+                background: '#1D1411',
+                color: '#FFB899',
+                padding: '1rem',
+                borderRadius: 'var(--radius-sm)',
+                fontSize: '0.78rem',
                 overflowX: 'auto',
-                fontFamily: 'var(--font-mono)' 
+                fontFamily: 'var(--font-mono)'
               }}>
-                {JSON.stringify(selectedEventDetails.detail || selectedEventDetails, null, 2)}
+                {JSON.stringify(selectedEventDetails, null, 2)}
               </pre>
             </div>
 
             <div className="modal-footer">
-              <button 
-                type="button" 
-                className="btn btn-secondary btn-sm" 
-                onClick={() => setShowTechnicalDrawer(false)}
-              >
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowTechnicalDrawer(false)}>
                 Close
               </button>
             </div>
-          </motion.div>
-        </motion.div>
+          </div>
+        </div>
       )}
 
     </div>

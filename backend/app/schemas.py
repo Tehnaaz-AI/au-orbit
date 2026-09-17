@@ -36,6 +36,7 @@ class ReportIn(BaseModel):
     reporter: str = Field(min_length=2, max_length=100)
     description: str = Field(min_length=5, max_length=2000)
     room_code: Optional[str] = None
+    media_urls: Optional[List[str]] = Field(default_factory=list)
 
 class StatusIn(BaseModel):
     status: str
@@ -45,6 +46,7 @@ class WorkAction(BaseModel):
     notes: Optional[str] = None
     technician_id: Optional[int] = None
     outcome: Optional[str] = None
+    resolution_media: Optional[List[str]] = Field(default_factory=list)
     auto_replan: Optional[bool] = True
 
 class TimetableEntryCreate(BaseModel):
@@ -142,6 +144,32 @@ class UserRegisterIn(BaseModel):
     specialty: Optional[str] = None
     phone: Optional[str] = None
 
+class UserCreateIn(BaseModel):
+    email: str = Field(min_length=5, max_length=120)
+    password: str = Field(min_length=4, max_length=100)
+    full_name: str = Field(min_length=2, max_length=100)
+    role: str = Field(default="STUDENT")
+    department: Optional[str] = None
+    specialty: Optional[str] = None
+    phone: Optional[str] = None
+    organization_id: Optional[int] = 1
+
+class UserUpdateIn(BaseModel):
+    full_name: Optional[str] = None
+    role: Optional[str] = None
+    department: Optional[str] = None
+    specialty: Optional[str] = None
+    phone: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class ProfileUpdateIn(BaseModel):
+    full_name: Optional[str] = None
+    department: Optional[str] = None
+    specialty: Optional[str] = None
+    phone: Optional[str] = None
+    current_password: Optional[str] = None
+    new_password: Optional[str] = None
+
 class UserLoginIn(BaseModel):
     email: str
     password: str
@@ -156,6 +184,7 @@ class UserOut(BaseModel):
     specialty: Optional[str] = None
     phone: Optional[str] = None
     avatar_color: Optional[str] = "#00f2ff"
+    is_active: bool = True
     created_at: datetime
 
     class Config:
@@ -333,6 +362,7 @@ class IncidentOut(BaseModel):
     category: str
     priority: str
     status: str
+    media_urls: List[str] = Field(default_factory=list)
     replan_count: int = 0
     created_at: Optional[str] = None
     resolution: Optional[str] = None

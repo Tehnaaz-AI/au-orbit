@@ -18,7 +18,7 @@ from .schemas import (
     ReportIn, StatusIn, WorkAction,
     TimetableEntryCreate, TimetableEntryUpdate, TimetableEntryOut,
     RoomOut, EquipmentOut, TechnicianOut, IncidentOut,
-    UserRegisterIn, UserLoginIn, UserOut, AuthResponse,
+    UserRegisterIn, UserLoginIn, UserCreateIn, UserUpdateIn, ProfileUpdateIn, UserOut, AuthResponse,
     OrganizationOut, CampusOut, DepartmentOut, AgentRunOut, AgentEventOut
 )
 from .auth import (
@@ -154,6 +154,158 @@ def login(payload: UserLoginIn, db: Session = Depends(get_db)):
 def get_me(user: User = Depends(require_user)):
     return user
 
+@app.put('/api/auth/profile', response_model=UserOut)
+def update_profile(
+    payload: ProfileUpdateIn,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db)
+):
+    """Allow any authenticated user to update their name, phone, department, specialty, and password."""
+    target_user = db.get(User, current_user.id)
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if payload.full_name is not None and payload.full_name.strip():
+        target_user.full_name = payload.full_name.strip()
+    if payload.department is not None:
+        target_user.department = payload.department.strip() if payload.department else None
+    if payload.specialty is not None:
+        target_user.specialty = payload.specialty.strip() if payload.specialty else None
+    if payload.phone is not None:
+        target_user.phone = payload.phone.strip() if payload.phone else None
+
+    # Optional password change
+    if payload.new_password:
+        if not payload.current_password:
+            raise HTTPException(status_code=400, detail="Current password is required to set a new password.")
+        if not verify_password(payload.current_password, target_user.hashed_password):
+            raise HTTPException(status_code=400, detail="Current password does not match.")
+        if len(payload.new_password) < 4:
+            raise HTTPException(status_code=400, detail="New password must be at least 4 characters.")
+        target_user.hashed_password = hash_password(payload.new_password)
+
+    db.commit()
+    db.refresh(target_user)
+    return target_user
+
+
+# =====================================================================
+# User Management & Governance (Admin / Super Admin / Operational Head)
+# =====================================================================
+
+@app.get('/api/users', response_model=List[UserOut])
+def get_users(
+    user: User = Depends(require_role(['SUPER_ADMIN', 'ADMIN', 'OPERATIONAL_HEAD', 'UNIVERSITY_ADMIN'])),
+    db: Session = Depends(get_db)
+):
+    """Retrieve all users. Super Admin sees all; other roles see their organization."""
+    if user.role == 'SUPER_ADMIN':
+        return db.query(User).order_by(User.id.asc()).all()
+    return db.query(User).filter(User.organization_id == user.organization_id).order_by(User.id.asc()).all()
+
+@app.post('/api/users', response_model=UserOut)
+def create_user(
+    payload: UserCreateIn,
+    current_user: User = Depends(require_role(['SUPER_ADMIN', 'ADMIN'])),
+    db: Session = Depends(get_db)
+):
+    """Create a new user with an explicit role assignment."""
+    email_clean = payload.email.strip().lower()
+    existing = db.query(User).filter(User.email == email_clean).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="User with this email already exists")
+
+    role_clean = payload.role.strip().upper()
+    valid_roles = ('STUDENT', 'FACULTY', 'TECHNICIAN', 'OPERATIONAL_HEAD', 'ADMIN', 'UNIVERSITY_ADMIN', 'SUPER_ADMIN')
+    if role_clean not in valid_roles:
+        raise HTTPException(status_code=400, detail=f"Invalid role '{role_clean}'. Must be one of {valid_roles}")
+
+    if role_clean == 'SUPER_ADMIN' and current_user.role != 'SUPER_ADMIN':
+        raise HTTPException(status_code=403, detail="Only a Super Admin can create another Super Admin account.")
+
+    role_colors = {
+        'SUPER_ADMIN': '#ec4899',
+        'ADMIN': '#00f2ff',
+        'OPERATIONAL_HEAD': '#e35336',
+        'UNIVERSITY_ADMIN': '#00f2ff',
+        'FACULTY': '#a855f7',
+        'TECHNICIAN': '#f59e0b',
+        'STUDENT': '#10b981'
+    }
+
+    org_id = payload.organization_id if current_user.role == 'SUPER_ADMIN' and payload.organization_id else current_user.organization_id
+
+    new_user = User(
+        organization_id=org_id,
+        email=email_clean,
+        hashed_password=hash_password(payload.password),
+        full_name=payload.full_name.strip(),
+        role=role_clean,
+        department=payload.department.strip() if payload.department else None,
+        specialty=payload.specialty.strip() if payload.specialty else None,
+        phone=payload.phone.strip() if payload.phone else None,
+        avatar_color=role_colors.get(role_clean, '#e35336'),
+        is_active=True
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return new_user
+
+@app.put('/api/users/{user_id}', response_model=UserOut)
+def update_user(
+    user_id: int,
+    payload: UserUpdateIn,
+    current_user: User = Depends(require_role(['SUPER_ADMIN', 'ADMIN', 'OPERATIONAL_HEAD'])),
+    db: Session = Depends(get_db)
+):
+    """Update user details, role assignment, department, or active status."""
+    target_user = db.get(User, user_id)
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if current_user.role != 'SUPER_ADMIN' and target_user.organization_id != current_user.organization_id:
+        raise HTTPException(status_code=403, detail="Access denied: User belongs to another organization.")
+
+    if payload.role:
+        role_clean = payload.role.strip().upper()
+        if role_clean == 'SUPER_ADMIN' and current_user.role != 'SUPER_ADMIN':
+            raise HTTPException(status_code=403, detail="Only Super Admins can promote users to Super Admin.")
+        target_user.role = role_clean
+
+    if payload.full_name is not None:
+        target_user.full_name = payload.full_name.strip()
+    if payload.department is not None:
+        target_user.department = payload.department.strip() if payload.department else None
+    if payload.specialty is not None:
+        target_user.specialty = payload.specialty.strip() if payload.specialty else None
+    if payload.phone is not None:
+        target_user.phone = payload.phone.strip() if payload.phone else None
+    if payload.is_active is not None:
+        target_user.is_active = payload.is_active
+
+    db.commit()
+    db.refresh(target_user)
+    return target_user
+
+@app.delete('/api/users/{user_id}')
+def delete_user(
+    user_id: int,
+    current_user: User = Depends(require_role(['SUPER_ADMIN'])),
+    db: Session = Depends(get_db)
+):
+    """Deactivate or remove a user account."""
+    target_user = db.get(User, user_id)
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if target_user.id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot delete your own active session account.")
+
+    db.delete(target_user)
+    db.commit()
+    return {"message": f"User #{user_id} ({target_user.email}) deleted successfully."}
+
 
 # =====================================================================
 # Organizations & Multi-Tenant Management
@@ -220,6 +372,7 @@ def incident_out(x: Incident, db: Session):
             'technician_id': w.technician_id,
             'scheduled_for': w.scheduled_for.isoformat() if w.scheduled_for else None,
             'started_at': w.started_at.isoformat() if w.started_at else None,
+            'resolution_media': w.resolution_media or [],
             'notes': w.notes
         })
 
@@ -312,6 +465,7 @@ def incident_out(x: Incident, db: Session):
         'category': x.category,
         'priority': x.priority,
         'status': x.status,
+        'media_urls': x.media_urls or [],
         'replan_count': x.replan_count or 0,
         'created_at': x.created_at.isoformat() if x.created_at else None,
         'resolution': x.resolution,
@@ -326,7 +480,9 @@ def incident_out(x: Incident, db: Session):
             'technician': tech.name if tech else None,
             'technician_id': work.technician_id,
             'scheduled_for': work.scheduled_for.isoformat() if work.scheduled_for else None,
-            'started_at': work.started_at.isoformat() if work.started_at else None
+            'started_at': work.started_at.isoformat() if work.started_at else None,
+            'resolution_media': work.resolution_media or [],
+            'notes': work.notes
         } if work else None,
         'work_orders': work_orders_list,
         'runs': runs_list,
@@ -364,6 +520,12 @@ def report(
         organization_id=org_id,
         reporter_id=reporter_id
     )
+
+    if payload.media_urls:
+        inc.media_urls = payload.media_urls
+        db.commit()
+        db.refresh(inc)
+
     out = incident_out(inc, db)
     
     # Send WhatsApp notification if configured
@@ -838,6 +1000,30 @@ def update_equipment_status(
     db.commit()
     return {'id': eq.id, 'name': eq.name, 'status': eq.status}
 
+@app.patch('/api/rooms/{code}/availability')
+def update_room_availability(
+    code: str,
+    payload: StatusIn,
+    current_user: Optional[User] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    org_id = current_user.organization_id if current_user and current_user.role != 'SUPER_ADMIN' else 1
+    norm_code = code.strip().upper()
+    room = db.query(Room).filter(Room.code == norm_code, Room.organization_id == org_id).first()
+    if not room:
+        raise HTTPException(status_code=404, detail=f"Room '{code}' not found")
+
+    valid_availabilities = {'AVAILABLE', 'OCCUPIED', 'MAINTENANCE', 'RESERVED'}
+    clean_status = payload.status.strip().upper()
+    if clean_status not in valid_availabilities:
+        raise HTTPException(status_code=400, detail=f"Invalid availability status '{clean_status}'. Allowed: {valid_availabilities}")
+
+    room.availability = clean_status
+    db.commit()
+    db.refresh(room)
+    return {'code': room.code, 'availability': room.availability}
+
+
 @app.get('/api/rooms/{code}/equipment', response_model=List[EquipmentOut])
 def get_room_equip(
     code: str,
@@ -1212,6 +1398,11 @@ def work_action(
         
     elif act == 'complete':
         w, i = ExecutionAgent.complete_work_order(db, work_id, payload.notes, payload.technician_id)
+        if payload.resolution_media:
+            w.resolution_media = payload.resolution_media
+            db.commit()
+            db.refresh(w)
+            db.refresh(i)
         return incident_out(i, db)
         
     elif act in ('verify', 'verify_success', 'verify_pass', 'verify_failed', 'verify_fail', 'reject_verification'):
@@ -1242,6 +1433,49 @@ def work_action(
 
     db.commit()
     return incident_out(i, db)
+
+@app.post('/api/work-orders/{work_id}/reassign')
+def reassign_work_order(
+    work_id: int,
+    payload: dict,
+    current_user: User = Depends(require_role(['SUPER_ADMIN', 'ADMIN', 'OPERATIONAL_HEAD'])),
+    db: Session = Depends(get_db)
+):
+    """Manually reassign a work order to another technician."""
+    w = db.get(WorkOrder, work_id)
+    if not w:
+        raise HTTPException(404, "Work order not found")
+
+    new_tech_id = payload.get("technician_id")
+    if not new_tech_id:
+        raise HTTPException(400, "technician_id is required")
+
+    new_tech = db.get(Technician, new_tech_id)
+    if not new_tech:
+        raise HTTPException(404, "Technician not found")
+
+    old_tech = db.get(Technician, w.technician_id) if w.technician_id else None
+    if old_tech:
+        old_tech.status = 'AVAILABLE'
+
+    w.technician_id = new_tech.id
+    w.status = 'ASSIGNED'
+    new_tech.status = 'BUSY'
+    w.notes = payload.get("notes") or f"Reassigned to {new_tech.name} by {current_user.full_name}"
+
+    log_agent_event(
+        db=db,
+        incident_id=w.incident_id,
+        agent="Operational Head Override",
+        action=f"Work order #{w.id} manually reassigned to {new_tech.name}",
+        tool="manual_reassign",
+        detail={"old_technician": old_tech.name if old_tech else None, "new_technician": new_tech.name, "assigned_by": current_user.full_name},
+        status="SUCCESS"
+    )
+
+    db.commit()
+    inc = db.get(Incident, w.incident_id)
+    return incident_out(inc, db)
 
 # =====================================================================
 # Inbound WhatsApp Webhook (Optional Integration)
