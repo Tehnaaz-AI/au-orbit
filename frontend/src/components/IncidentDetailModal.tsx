@@ -283,14 +283,62 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
           {activeTab === 'overview' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               
-              {/* Problem Description */}
-              <div style={{ background: 'var(--bg-surface)', padding: '1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
-                <span className="stat-label">Reported Issue</span>
-                <p style={{ fontSize: '0.92rem', color: 'var(--text-main)', marginTop: '0.25rem', fontWeight: 500 }}>
-                  "{incident.description}"
-                </p>
-                <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
-                  Reported by: <b>{incident.reporter}</b>
+              {/* Problem Description & Reporter Profile Card */}
+              <div style={{ background: 'var(--bg-surface)', padding: '1.15rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div>
+                  <span className="stat-label">Reported Issue Description</span>
+                  <p style={{ fontSize: '0.95rem', color: 'var(--text-main)', marginTop: '0.25rem', fontWeight: 600, lineHeight: 1.5 }}>
+                    "{incident.description}"
+                  </p>
+                </div>
+
+                {/* Reporter Identity & Metadata Block */}
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'space-between', 
+                  flexWrap: 'wrap', 
+                  gap: '0.65rem',
+                  paddingTop: '0.65rem',
+                  borderTop: '1px solid var(--border-subtle)',
+                  fontSize: '0.8rem',
+                  background: '#FFFFFF',
+                  padding: '0.65rem 0.85rem',
+                  borderRadius: 'var(--radius-sm)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: '50%',
+                      background: 'var(--color-primary-subtle)',
+                      color: 'var(--color-primary-dark)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: 800,
+                      fontSize: '0.76rem'
+                    }}>
+                      {incident.reporter ? incident.reporter.charAt(0).toUpperCase() : 'U'}
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 700, color: 'var(--text-main)' }}>
+                        Reported By: {incident.reporter}
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                        Origin Channel: Verified AUOrbit Web Intake & Voice Channel
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <span className="badge badge-neutral" style={{ fontSize: '0.72rem' }}>
+                      Location: {incident.room_code || 'General Space'}
+                    </span>
+                    <span className="badge badge-info" style={{ fontSize: '0.72rem' }}>
+                      Ticket #{incident.id}
+                    </span>
+                  </div>
                 </div>
               </div>
 

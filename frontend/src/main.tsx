@@ -30,6 +30,7 @@ import { IncidentDetailModal } from './components/IncidentDetailModal';
 import { AboutPage } from './components/pages/AboutPage';
 import { ProfilePage } from './components/pages/ProfilePage';
 import { ContactPage } from './components/pages/ContactPage';
+import { NotificationsPage } from './components/pages/NotificationsPage';
 import { NotFoundPage } from './components/pages/NotFoundPage';
 import { Footer } from './components/Footer';
 import { OrbitBackground } from './components/OrbitBackground';
@@ -551,8 +552,19 @@ export function App() {
               />
             )}
 
+            {/* Tab 11: OPERATIONS NOTIFICATIONS CENTER */}
+            {activeTab === 'notifications' && (
+              <NotificationsPage
+                currentUser={currentUser}
+                incidents={incidents}
+                onSelectIncident={setSelectedIncident}
+                onNavigateTab={setActiveTab}
+                onRefresh={refreshAll}
+              />
+            )}
+
             {/* Fallback 404 for unknown tab */}
-            {!['about', 'contact', 'dashboard', 'my_issues', 'report_issue', 'incidents', 'work_orders', 'resources', 'users', 'timetable', 'agent_runs', 'profile'].includes(activeTab) && (
+            {!['about', 'contact', 'dashboard', 'my_issues', 'report_issue', 'incidents', 'work_orders', 'resources', 'users', 'timetable', 'agent_runs', 'profile', 'notifications'].includes(activeTab) && (
               <NotFoundPage onBackToDashboard={() => setActiveTab('dashboard')} onNavigateTab={setActiveTab} />
             )}
           </motion.div>

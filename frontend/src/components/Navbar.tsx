@@ -17,7 +17,8 @@ import {
   Sun,
   Moon,
   Headphones,
-  Phone
+  Phone,
+  Bell
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -305,6 +306,45 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* Right User Bar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexShrink: 0 }}>
+        {/* Notifications Center Trigger */}
+        <button
+          type="button"
+          onClick={() => onSelectTab && onSelectTab('notifications')}
+          className={`btn btn-sm ${activeTab === 'notifications' ? 'btn-primary' : 'btn-ghost'}`}
+          title="Operations Notification Center"
+          style={{
+            position: 'relative',
+            padding: '0.35rem 0.55rem',
+            borderRadius: 'var(--radius-full)',
+            border: activeTab === 'notifications' ? '1px solid var(--color-primary)' : '1px solid var(--border-subtle)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.3rem'
+          }}
+        >
+          <Bell size={14} />
+          {emergencyCount > 0 && (
+            <span style={{
+              position: 'absolute',
+              top: -4,
+              right: -4,
+              minWidth: 16,
+              height: 16,
+              borderRadius: '50%',
+              background: 'var(--status-danger)',
+              color: '#FFFFFF',
+              fontSize: '0.65rem',
+              fontWeight: 800,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '0 2px'
+            }}>
+              {emergencyCount}
+            </span>
+          )}
+        </button>
+
         <button
           type="button"
           onClick={() => onSelectTab && onSelectTab('profile')}

@@ -107,8 +107,15 @@ export const WorkOrderCard: React.FC<WorkOrderCardProps> = ({
           <span>Space: <strong>{incident?.room_code || 'Campus Space'}</strong></span>
         </div>
 
+        {incident?.reporter && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+            <UserCheck size={12} color="var(--color-primary-dark)" />
+            <span>Reported by: <strong>{incident.reporter}</strong></span>
+          </div>
+        )}
+
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-          <UserCheck size={12} />
+          <Wrench size={12} />
           <span>Technician: <strong>{workOrder.technician || 'Assigned Specialist'}</strong></span>
         </div>
       </div>

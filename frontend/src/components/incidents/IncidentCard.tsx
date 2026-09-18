@@ -105,15 +105,15 @@ export const IncidentCard: React.FC<IncidentCardProps> = ({
         fontSize: '0.78rem',
         color: 'var(--text-muted)'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: 600 }}>
             <MapPin size={12} color="var(--color-primary)" />
-            {incident.room_code || 'General Campus'}
+            Space: {incident.room_code || 'General Campus'}
           </span>
           <span>·</span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-            <UserCheck size={12} />
-            {incident.reporter}
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+            <UserCheck size={12} color="var(--color-primary-dark)" />
+            Reported by: <strong style={{ color: 'var(--text-main)' }}>{incident.reporter}</strong>
           </span>
         </div>
 
