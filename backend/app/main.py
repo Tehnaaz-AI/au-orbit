@@ -51,17 +51,60 @@ from .services import (
 
 app = FastAPI(title='AUOrbit Multi-Tenant API', version='1.0.0')
 
-# Configure CORS cleanly for local & cloud Vercel deployments
-raw_origins = CORS_ORIGINS or '*'
-origins = [o.strip() for o in raw_origins.split(',') if o.strip()]
+# Explicit CORS Origins including production Vercel frontend and local development
+ALLOWED_CORS_ORIGINS = [
+    "https://au-orbit-xi.vercel.app",
+    "https://au-orbit.vercel.app",
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:3000"
+]
+if CORS_ORIGINS:
+    for extra in CORS_ORIGINS.split(','):
+        if extra.strip() and extra.strip() not in ALLOWED_CORS_ORIGINS:
+            ALLOWED_CORS_ORIGINS.append(extra.strip())
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins if origins and '*' not in origins else ["*"],
-    allow_origin_regex=r"^https?://.*",
+    allow_origins=ALLOWED_CORS_ORIGINS,
+    allow_origin_regex=r"https://.*\.vercel\.app|http://localhost:\d+|http://127\.0\.0\.1:\d+",
     allow_credentials=True,
-    allow_methods=['*'],
-    allow_headers=['*']
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allow_headers=["*"],
+    expose_headers=["*"]
 )
+
+@app.middleware("http")
+async def cors_handler_middleware(request: Request, call_next):
+    if request.method == "OPTIONS":
+        origin = request.headers.get("origin") or "*"
+        from fastapi.responses import Response
+        res = Response(status_code=204)
+        res.headers["Access-Control-Allow-Origin"] = origin
+        res.headers["Access-Control-Allow-Credentials"] = "true"
+        res.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+        res.headers["Access-Control-Allow-Headers"] = "*"
+        return res
+    
+    try:
+        response = await call_next(request)
+    except Exception as exc:
+        import logging
+        logging.getLogger("auorbit").error(f"Unhandled error on {request.url.path}: {exc}")
+        from fastapi.responses import JSONResponse
+        response = JSONResponse(
+            status_code=500,
+            content={"detail": f"Server processing error: {str(exc)}"}
+        )
+    
+    origin = request.headers.get("origin")
+    if origin:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+    return response
 
 @app.on_event('startup')
 def start():

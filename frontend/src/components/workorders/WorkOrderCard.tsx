@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { WorkOrderItem, Incident, User } from '../../types';
 import { MediaUploadZone } from '../media/MediaUploadZone';
-import { Wrench, Play, CheckCircle2, XCircle, MapPin, Clock, UserCheck, ArrowRight, Image } from 'lucide-react';
+import { Wrench, Play, CheckCircle2, XCircle, MapPin, Clock, UserCheck, ArrowRight, Image, Volume2 } from 'lucide-react';
 
 interface WorkOrderCardProps {
   workOrder: WorkOrderItem;
@@ -86,6 +86,30 @@ export const WorkOrderCard: React.FC<WorkOrderCardProps> = ({
       {incident && (
         <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-main)', lineHeight: 1.45 }}>
           {incident.description}
+        </div>
+      )}
+
+      {/* Reported Audio Voice Note Player for Technicians */}
+      {incident?.media_urls && incident.media_urls.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', padding: '0.55rem 0.75rem', background: 'var(--bg-surface)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+          {incident.media_urls.map((url, idx) => {
+            const isAudio = url.startsWith('data:audio') || url.endsWith('.mp3') || url.endsWith('.wav') || url.endsWith('.ogg') || url.endsWith('.m4a') || url.endsWith('.webm');
+            if (isAudio) {
+              return (
+                <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.78rem', fontWeight: 700, color: 'var(--color-primary-dark)' }}>
+                    <Volume2 size={15} /> Listen to Reported Voice Note:
+                  </div>
+                  <audio controls src={url} style={{ height: '32px', flex: 1, minWidth: '220px' }} />
+                </div>
+              );
+            }
+            return (
+              <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                <Image size={13} color="var(--color-primary)" /> Photo Evidence Attached (Inspect Details)
+              </div>
+            );
+          })}
         </div>
       )}
 

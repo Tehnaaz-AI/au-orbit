@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Incident } from '../../types';
-import { MapPin, Clock, ArrowRight, UserCheck, ShieldAlert, CheckCircle2, XCircle } from 'lucide-react';
+import { MapPin, Clock, ArrowRight, UserCheck, ShieldAlert, CheckCircle2, XCircle, Volume2 } from 'lucide-react';
 
 interface IncidentCardProps {
   incident: Incident;
@@ -92,6 +92,20 @@ export const IncidentCard: React.FC<IncidentCardProps> = ({
       }}>
         {incident.description}
       </div>
+
+      {/* Reported Audio Voice Note Player */}
+      {incident.media_urls && incident.media_urls.some(u => u.startsWith('data:audio') || u.endsWith('.mp3') || u.endsWith('.wav') || u.endsWith('.ogg') || u.endsWith('.m4a') || u.endsWith('.webm')) && (
+        <div 
+          onClick={e => e.stopPropagation()} 
+          style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', padding: '0.45rem 0.65rem', background: 'var(--bg-surface)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}
+        >
+          <Volume2 size={14} color="var(--color-primary)" />
+          <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-main)', whiteSpace: 'nowrap' }}>Voice Note:</span>
+          {incident.media_urls.filter(u => u.startsWith('data:audio') || u.endsWith('.mp3') || u.endsWith('.wav') || u.endsWith('.ogg') || u.endsWith('.m4a') || u.endsWith('.webm')).map((url, idx) => (
+            <audio key={idx} controls src={url} style={{ height: '28px', flex: 1, minWidth: '180px' }} />
+          ))}
+        </div>
+      )}
 
       {/* Footer Info: Room, Reporter, Action */}
       <div style={{ 
