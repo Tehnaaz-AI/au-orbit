@@ -51,12 +51,13 @@ from .services import (
 
 app = FastAPI(title='AUOrbit Multi-Tenant API', version='1.0.0')
 
-# Configure CORS cleanly
-raw_origins = CORS_ORIGINS or 'http://localhost:5173'
+# Configure CORS cleanly for local & cloud Vercel deployments
+raw_origins = CORS_ORIGINS or '*'
 origins = [o.strip() for o in raw_origins.split(',') if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins if origins else ['*'],
+    allow_origins=origins if origins and '*' not in origins else ["*"],
+    allow_origin_regex=r"^https?://.*",
     allow_credentials=True,
     allow_methods=['*'],
     allow_headers=['*']
@@ -75,6 +76,16 @@ def start():
         logging.getLogger("auorbit").warning(f"Startup initialization notice: {e}")
 
 from sqlalchemy import text
+
+@app.get('/')
+def root():
+    return {
+        "platform": "AUOrbit — Autonomous University Operations Platform",
+        "status": "operational",
+        "version": "2.0.0",
+        "docs_url": "/docs",
+        "health_check": "/api/health"
+    }
 
 @app.get('/api/health')
 @app.get('/health')
