@@ -341,6 +341,7 @@ def seed(db):
         {"email": "student@anurag.edu.in", "full_name": "Rahul Sharma (Student)", "role": "STUDENT", "department": "Department of AI", "specialty": None},
         {"email": "faculty@anurag.edu.in", "full_name": "Dr. Ananya S. (Faculty)", "role": "FACULTY", "department": "Department of AI", "specialty": None},
         {"email": "technician@anurag.edu.in", "full_name": "Arjun Rao (Technician)", "role": "TECHNICIAN", "department": "Campus Facilities", "specialty": "AV_ELECTRICAL"},
+        {"email": "operations.head@anurag.edu.in", "full_name": "Vikram Reddy (Maintenance & Facilities Head)", "role": "OPERATIONAL_HEAD", "department": "Campus Maintenance & Operations", "specialty": "FACILITIES_FLEET"},
         {"email": "admin@anurag.edu.in", "full_name": "Campus Operations Admin", "role": "ADMIN", "department": "University Operations", "specialty": None},
         {"email": "superadmin@anurag.edu.in", "full_name": "Platform Super Admin", "role": "SUPER_ADMIN", "department": "IT & Infrastructure", "specialty": None},
     ]

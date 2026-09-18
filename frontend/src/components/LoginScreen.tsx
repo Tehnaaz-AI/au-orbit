@@ -18,7 +18,8 @@ import {
   CheckCircle2,
   Sparkles,
   ShieldCheck,
-  RefreshCw
+  RefreshCw,
+  Building2
 } from 'lucide-react';
 
 interface LoginScreenProps {
@@ -52,6 +53,14 @@ const DEMO_PRESETS = [
     password: 'password123',
     icon: <Wrench size={12} />,
     color: '#D97706'
+  },
+  {
+    role: 'OPERATIONAL_HEAD',
+    label: 'Ops Head',
+    email: 'operations.head@anurag.edu.in',
+    password: 'password123',
+    icon: <Building2 size={12} />,
+    color: '#059669'
   },
   {
     role: 'ADMIN',
@@ -461,11 +470,88 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
           {/* REGISTER VIEW */}
           {mode === 'REGISTER' && (
-            <form onSubmit={handleRegister} autoComplete="off" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
               
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Role</label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem' }}>
+              {/* 1-Click Register Presets */}
+              <div style={{
+                background: 'var(--bg-surface)',
+                borderRadius: 'var(--radius-sm)',
+                border: '1px solid var(--border-subtle)',
+                padding: '0.55rem 0.75rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.35rem' }}>
+                  <Zap size={12} color="var(--color-primary)" />
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-main)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    1-Click Auto-Fill Demo
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: '0.35rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const rand = Math.floor(100 + Math.random() * 900);
+                      setRegFullName(`Kavya Reddy (Student ${rand})`);
+                      setRegEmail(`kavya.${rand}@anurag.edu.in`);
+                      setRegRole('STUDENT');
+                      setRegDepartment('Department of AI');
+                      setRegPhone('+91 98765 43210');
+                      setRegPassword('password123');
+                    }}
+                    style={{
+                      flex: 1,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.25rem',
+                      padding: '0.25rem 0.5rem',
+                      borderRadius: 'var(--radius-full)',
+                      background: '#FFFFFF',
+                      border: '1px solid var(--border-default)',
+                      fontSize: '0.72rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      color: 'var(--text-main)'
+                    }}
+                  >
+                    <GraduationCap size={12} color="#A0522D" /> Fill Student Demo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const rand = Math.floor(100 + Math.random() * 900);
+                      setRegFullName(`Prof. Srinivas V. (${rand})`);
+                      setRegEmail(`srinivas.${rand}@anurag.edu.in`);
+                      setRegRole('FACULTY');
+                      setRegDepartment('Department of CSE');
+                      setRegPhone('+91 98456 12345');
+                      setRegPassword('password123');
+                    }}
+                    style={{
+                      flex: 1,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.25rem',
+                      padding: '0.25rem 0.5rem',
+                      borderRadius: 'var(--radius-full)',
+                      background: '#FFFFFF',
+                      border: '1px solid var(--border-default)',
+                      fontSize: '0.72rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      color: 'var(--text-main)'
+                    }}
+                  >
+                    <BookOpen size={12} color="#E35336" /> Fill Faculty Demo
+                  </button>
+                </div>
+              </div>
+
+              <form onSubmit={handleRegister} autoComplete="off" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Role</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem' }}>
                   <button
                     type="button"
                     className={`btn btn-sm ${regRole === 'STUDENT' ? 'btn-primary' : 'btn-secondary'}`}
@@ -564,10 +650,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 </div>
               </div>
 
-              <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: '100%', marginTop: '0.4rem', padding: '0.55rem' }}>
-                {loading ? 'Creating Account...' : 'Register'} <ArrowRight size={15} />
-              </button>
-            </form>
+                <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: '100%', marginTop: '0.4rem', padding: '0.55rem' }}>
+                  {loading ? 'Creating Account...' : 'Register'} <ArrowRight size={15} />
+                </button>
+              </form>
+            </div>
           )}
 
         </div>
