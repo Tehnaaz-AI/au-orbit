@@ -218,6 +218,11 @@ export const api = {
 
   // Contact & System Information
   getContactInfo: () => request<ContactInfo>('/system/contact'),
+  sendContactMessage: (data: { name: string; email: string; subject?: string; message: string }) =>
+    request<{ status: string; ticket_id: number; recipient_email: string; recipient_phone: string; campus_hotline: string; mailto_url: string; message: string }>('/system/contact', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
 
   // Media Upload (Audio, Photo, Video)
   uploadMedia: (data: { media_url: string; type?: 'audio' | 'image' | 'video' }) =>

@@ -22,7 +22,7 @@ from .schemas import (
     TimetableEntryCreate, TimetableEntryUpdate, TimetableEntryOut,
     RoomOut, EquipmentOut, TechnicianOut, IncidentOut,
     UserRegisterIn, UserLoginIn, UserCreateIn, UserUpdateIn, ProfileUpdateIn, UserOut, AuthResponse,
-    OrganizationOut, CampusOut, DepartmentOut, AgentRunOut, AgentEventOut, ContactInfoOut
+    OrganizationOut, CampusOut, DepartmentOut, AgentRunOut, AgentEventOut, ContactInfoOut, ContactMessageIn
 )
 from .auth import (
     hash_password, verify_password, create_access_token, decode_access_token,
@@ -106,6 +106,43 @@ def get_contact_info():
         'campus_name': CAMPUS_NAME,
         'campus_address': CAMPUS_ADDRESS,
         'campus_hours': CAMPUS_HOURS
+    }
+
+@app.post('/api/system/contact')
+def submit_contact_inquiry(payload: ContactMessageIn, db: Session = Depends(get_db)):
+    """
+    Accepts campus contact desk inquiries, logs them into the operations queue,
+    and provides mailto delivery metadata.
+    """
+    import urllib.parse
+    clean_name = (payload.name or "Campus User").strip()
+    clean_email = payload.email.strip().lower()
+    clean_subject = (payload.subject or "Campus Operations Inquiry").strip()
+    clean_msg = payload.message.strip()
+
+    # Log inquiry as an operational ticket in database
+    inc = Incident(
+        organization_id=1,
+        reporter=f"{clean_name} ({clean_email})",
+        description=f"[{clean_subject}] {clean_msg}",
+        category='GENERAL_INQUIRY',
+        priority='LOW',
+        status='REPORTED'
+    )
+    db.add(inc)
+    db.commit()
+    db.refresh(inc)
+
+    mailto_link = f"mailto:{CONTACT_EMAIL}?subject={urllib.parse.quote(clean_subject)}&body={urllib.parse.quote(f'From: {clean_name} ({clean_email})\n\nMessage:\n{clean_msg}')}"
+
+    return {
+        'status': 'success',
+        'ticket_id': inc.id,
+        'recipient_email': CONTACT_EMAIL,
+        'recipient_phone': CONTACT_PHONE,
+        'campus_hotline': CAMPUS_HOTLINE,
+        'mailto_url': mailto_link,
+        'message': f"Inquiry registered as Ticket #{inc.id} with the Campus Operations Desk."
     }
 
 @app.post('/api/media/upload')

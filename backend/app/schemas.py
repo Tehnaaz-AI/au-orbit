@@ -388,3 +388,9 @@ class IncidentOut(BaseModel):
     work_orders: List[Dict[str, Any]] = Field(default_factory=list)
     runs: List[AgentRunOut] = Field(default_factory=list)
     events: List[AgentEventOut] = Field(default_factory=list)
+
+class ContactMessageIn(BaseModel):
+    name: Optional[str] = Field(default="Campus User", max_length=100)
+    email: str = Field(min_length=3, max_length=100)
+    subject: Optional[str] = Field(default="Helpdesk Inquiry", max_length=150)
+    message: str = Field(min_length=2, max_length=3000)

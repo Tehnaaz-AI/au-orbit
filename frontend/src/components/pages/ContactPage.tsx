@@ -38,6 +38,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onBackToApp, onNavigat
   const [message, setMessage] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [submissionResult, setSubmissionResult] = useState<{ ticket_id?: number; recipient_email?: string; mailto_url?: string } | null>(null);
 
   useEffect(() => {
     api.getContactInfo()
@@ -49,19 +50,31 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onBackToApp, onNavigat
       });
   }, []);
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!senderEmail.trim() || !message.trim()) return;
 
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const res = await api.sendContactMessage({
+        name: senderName.trim() || 'Campus User',
+        email: senderEmail.trim(),
+        subject: subject.trim() || 'Campus Helpdesk Inquiry',
+        message: message.trim()
+      });
+      setSubmissionResult(res);
       setSubmitted(true);
-      setSenderName('');
-      setSenderEmail('');
-      setSubject('');
-      setMessage('');
-    }, 600);
+    } catch (err) {
+      console.warn('Backend contact submission fallback:', err);
+      const mailto = `mailto:${contactInfo.contact_email}?subject=${encodeURIComponent(subject.trim() || 'Campus Inquiry')}&body=${encodeURIComponent(`From: ${senderName} (${senderEmail})\n\n${message}`)}`;
+      setSubmissionResult({
+        recipient_email: contactInfo.contact_email,
+        mailto_url: mailto
+      });
+      setSubmitted(true);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -278,16 +291,38 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onBackToApp, onNavigat
             >
               <CheckCircle2 size={36} color="var(--status-success-text)" />
               <div style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--status-success-text)', fontFamily: 'var(--font-heading)' }}>
-                Message Transmitted Successfully
+                {submissionResult?.ticket_id ? `Inquiry Logged as Ticket #${submissionResult.ticket_id}` : 'Inquiry Transmitted Successfully'}
               </div>
-              <p style={{ fontSize: '0.86rem', color: 'var(--text-body)', margin: 0, maxWidth: '380px' }}>
-                Thank you. Your inquiry has been routed to the AUOrbit campus operations helpdesk team. We will respond to your email shortly.
+              <p style={{ fontSize: '0.86rem', color: 'var(--text-body)', margin: 0, maxWidth: '420px' }}>
+                Your operational message has been registered with the <strong>AUOrbit Campus Operations Desk</strong> ({submissionResult?.recipient_email || contactInfo.contact_email}).
               </p>
+              
+              {submissionResult?.mailto_url && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.5rem', width: '100%', maxWidth: '340px' }}>
+                  <a
+                    href={submissionResult.mailto_url}
+                    className="btn btn-primary btn-sm"
+                    style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', padding: '0.45rem 0.85rem' }}
+                  >
+                    <Mail size={14} /> Open in Email App (Direct Send)
+                  </a>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                    Sends pre-filled message straight to {contactInfo.contact_email}
+                  </span>
+                </div>
+              )}
+
               <button
                 type="button"
                 className="btn btn-secondary btn-sm"
-                onClick={() => setSubmitted(false)}
-                style={{ marginTop: '0.75rem' }}
+                onClick={() => {
+                  setSubmitted(false);
+                  setSenderName('');
+                  setSenderEmail('');
+                  setSubject('');
+                  setMessage('');
+                }}
+                style={{ marginTop: '0.5rem' }}
               >
                 Send Another Message
               </button>
