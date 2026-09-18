@@ -39,6 +39,7 @@ export const TechnicianPortal: React.FC<TechnicianPortalProps> = ({
   onError,
   onSuccess
 }) => {
+  const [actingWorkId, setActingWorkId] = useState<number | null>(null);
   const userCleanName = currentUser.full_name.toLowerCase().replace(/\s*\(technician\)\s*/i, '').trim();
 
   // Find matching technician profile
