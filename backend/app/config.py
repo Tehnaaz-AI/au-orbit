@@ -12,7 +12,7 @@ env_paths = [
 
 for p in env_paths:
     if p.exists():
-        load_dotenv(dotenv_path=p, override=False)
+        load_dotenv(dotenv_path=p, override=True)
 
 GEMINI_API_KEY = (os.getenv("GEMINI_API_KEY") or "").strip()
 AI_PROVIDER = os.getenv("AI_PROVIDER", "gemini").lower().strip()
