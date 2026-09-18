@@ -340,7 +340,10 @@ def seed(db):
     default_users = [
         {"email": "student@anurag.edu.in", "full_name": "Rahul Sharma (Student)", "role": "STUDENT", "department": "Department of AI", "specialty": None},
         {"email": "faculty@anurag.edu.in", "full_name": "Dr. Ananya S. (Faculty)", "role": "FACULTY", "department": "Department of AI", "specialty": None},
-        {"email": "technician@anurag.edu.in", "full_name": "Arjun Rao (Technician)", "role": "TECHNICIAN", "department": "Campus Facilities", "specialty": "AV_ELECTRICAL"},
+        {"email": "technician@anurag.edu.in", "full_name": "Arjun Rao (Technician)", "role": "TECHNICIAN", "department": "Campus Facilities", "specialty": "AV_ELECTRICAL", "tech_name": "Arjun Rao"},
+        {"email": "ramesh.verma@anurag.edu.in", "full_name": "Ramesh Verma (Facilities Specialist)", "role": "TECHNICIAN", "department": "Campus Facilities & HVAC", "specialty": "FACILITIES", "tech_name": "Ramesh Verma"},
+        {"email": "priya.nair@anurag.edu.in", "full_name": "Priya Nair (IT & Network Specialist)", "role": "TECHNICIAN", "department": "IT Infrastructure", "specialty": "IT_NETWORK", "tech_name": "Priya Nair"},
+        {"email": "anand.kumar@anurag.edu.in", "full_name": "Anand Kumar (Plumbing & Water Systems)", "role": "TECHNICIAN", "department": "Campus Maintenance", "specialty": "PLUMBING", "tech_name": "Anand Kumar"},
         {"email": "operations.head@anurag.edu.in", "full_name": "Vikram Reddy (Maintenance & Facilities Head)", "role": "OPERATIONAL_HEAD", "department": "Campus Maintenance & Operations", "specialty": "FACILITIES_FLEET"},
         {"email": "admin@anurag.edu.in", "full_name": "Campus Operations Admin", "role": "ADMIN", "department": "University Operations", "specialty": None},
         {"email": "superadmin@anurag.edu.in", "full_name": "Platform Super Admin", "role": "SUPER_ADMIN", "department": "IT & Infrastructure", "specialty": None},
@@ -361,9 +364,9 @@ def seed(db):
             )
             db.add(u_obj)
             db.flush()
-            if u_data["role"] == "TECHNICIAN":
-                tech_record = db.query(Technician).filter(Technician.name == 'Arjun Rao').first()
-                if tech_record and not tech_record.user_id:
+            if u_data.get("tech_name"):
+                tech_record = db.query(Technician).filter(Technician.name == u_data["tech_name"]).first()
+                if tech_record:
                     tech_record.user_id = u_obj.id
 
     db.commit()
