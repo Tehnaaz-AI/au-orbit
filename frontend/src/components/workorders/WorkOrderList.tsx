@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Incident, WorkOrderItem, User } from '../../types';
+import { Incident, WorkOrderItem, User, Technician } from '../../types';
 import { WorkOrderCard } from './WorkOrderCard';
 import { Wrench, Inbox, Search } from 'lucide-react';
 
 interface WorkOrderListProps {
   incidents: Incident[];
   currentUser: User;
-  technicians?: import('../../types').Technician[];
+  technicians?: Technician[];
   onRefresh?: () => void;
   onError?: (msg: string) => void;
   onSuccess?: (msg: string) => void;
@@ -24,6 +24,7 @@ interface WorkOrderListProps {
 export const WorkOrderList: React.FC<WorkOrderListProps> = ({
   incidents,
   currentUser,
+  technicians = [],
   onSelectIncident,
   onStartJob,
   onCompleteJob,
@@ -48,12 +49,27 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
     }
   });
 
+  const userCleanName = currentUser.full_name.toLowerCase().replace(/\s*\(technician\)\s*/i, '').trim();
+  const activeTech = technicians?.find(t => 
+    (t as any).user_id === currentUser.id ||
+    t.name.toLowerCase().includes(userCleanName) ||
+    userCleanName.includes(t.name.toLowerCase()) ||
+    (t as any).email?.toLowerCase() === currentUser.email.toLowerCase()
+  );
+  const activeTechId = activeTech?.id;
+
   const filteredOrders = allOrdersWithIncidents.filter(({ workOrder, incident }) => {
     // If technician filter is active, only show their assignments
     if (filterTechnicianOnly) {
+      const woTechName = (workOrder.technician || '').toLowerCase().trim();
       const isAssigned = (
-        workOrder.technician_id === currentUser.id ||
-        (workOrder.technician && workOrder.technician.toLowerCase().includes(currentUser.full_name.toLowerCase()))
+        (activeTechId && workOrder.technician_id === activeTechId) ||
+        (workOrder.technician_id === currentUser.id) ||
+        (woTechName && userCleanName && (
+          woTechName.includes(userCleanName) ||
+          userCleanName.includes(woTechName)
+        )) ||
+        currentUser.role === 'TECHNICIAN'
       );
       if (!isAssigned) return false;
     }

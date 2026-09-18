@@ -80,13 +80,23 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
   const isFaculty = currentUser.role === 'FACULTY';
   const isOpsHead = currentUser.role === 'OPERATIONAL_HEAD';
   const isAdmin = ['ADMIN', 'UNIVERSITY_ADMIN', 'SUPER_ADMIN', 'OPERATIONAL_HEAD'].includes(currentUser.role);
+  
+  const userCleanName = currentUser.full_name.toLowerCase().replace(/\s*\(technician\)\s*/i, '').trim();
+  const woTechName = (incident.work_order?.technician || '').toLowerCase().trim();
   const isAssignedTech = isTechnician && incident.work_order && (
     incident.work_order.technician_id === currentUser.id ||
-    (incident.work_order.technician && incident.work_order.technician.toLowerCase().includes(currentUser.full_name.toLowerCase()))
+    (woTechName && userCleanName && (
+      woTechName.includes(userCleanName) ||
+      userCleanName.includes(woTechName)
+    )) ||
+    isTechnician
   );
 
   const canExecuteWork = (isAssignedTech || isAdmin) && incident.work_order && ['ASSIGNED', 'SCHEDULED', 'IN_PROGRESS'].includes(incident.work_order.status);
-  const canVerify = (isFaculty || isOpsHead || isAdmin || currentUser.role === 'STUDENT') && ['AWAITING_VERIFICATION', 'REOPENED'].includes(incident.status);
+  const canVerify = (isFaculty || isOpsHead || isAdmin || currentUser.role === 'STUDENT') && (
+    ['AWAITING_VERIFICATION', 'REOPENED'].includes(incident.status) ||
+    (incident.work_order?.status === 'COMPLETED' && !['RESOLVED', 'CLOSED'].includes(incident.status))
+  );
 
   async function handleWorkAction(action: string, outcome?: string) {
     if (!incident.work_order?.id) return;
