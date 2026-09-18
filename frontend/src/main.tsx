@@ -507,6 +507,7 @@ export function App() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 <UserManagementView
                   currentUser={currentUser}
+                  onRefresh={refreshAll}
                   onError={showError}
                   onSuccess={showSuccess}
                 />
@@ -519,9 +520,6 @@ export function App() {
                 <TimetableManager
                   timetable={timetable}
                   rooms={rooms}
-                  onRefresh={refreshAll}
-                  onError={showError}
-                  onSuccess={showSuccess}
                 />
               </div>
             )}
@@ -529,14 +527,16 @@ export function App() {
             {/* Tab 9: AGENT TELEMETRY (Dedicated Full Page) */}
             {activeTab === 'agent_runs' && isAdmin && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                <AgentExecutionTracker
-                  incident={selectedIncident || incidents[0]}
-                  allIncidents={incidents}
-                  onSelectIncident={setSelectedIncident}
-                  onRefresh={refreshAll}
-                  onError={showError}
-                  onSuccess={showSuccess}
-                />
+                {incidents.length > 0 ? (
+                  <AgentExecutionTracker
+                    incident={selectedIncident || incidents[0]}
+                  />
+                ) : (
+                  <div className="card" style={{ padding: '2.5rem', textAlign: 'center' }}>
+                    <h3 style={{ fontSize: '1.2rem', marginBottom: '0.4rem', color: 'var(--text-main)' }}>No Active Telemetry Streams</h3>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>Report a campus incident to inspect live 9-agent execution graphs, decision trees, and dispatch logs.</p>
+                  </div>
+                )}
               </div>
             )}
 
