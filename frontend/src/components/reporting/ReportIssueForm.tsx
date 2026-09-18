@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Incident, User, Room } from '../../types';
 import { api } from '../../api';
 import { MediaUploadZone } from '../media/MediaUploadZone';
+import { AudioRecorderZone } from '../media/AudioRecorderZone';
 import { Send, CheckCircle2, ArrowRight, Sparkles, MapPin, AlertCircle, PlusCircle } from 'lucide-react';
 
 interface ReportIssueFormProps {
@@ -218,6 +219,14 @@ export const ReportIssueForm: React.FC<ReportIssueFormProps> = ({
               onChange={setMediaUrls}
               label="Attach Problem Photo / Video Evidence (Optional)"
               helperText="Upload photos or videos of the flickering projector, broken AC, or lab fault."
+            />
+
+            {/* Voice Audio Recording Zone */}
+            <AudioRecorderZone
+              mediaUrls={mediaUrls}
+              onChange={setMediaUrls}
+              label="Record / Upload Audio Voice Note (Optional)"
+              helperText="Speak and record what's wrong with your microphone or upload audio (.mp3, .wav, .m4a, .webm)."
             />
 
             <div style={{ 

@@ -135,6 +135,14 @@ class TechnicianOut(BaseModel):
     class Config:
         from_attributes = True
 
+class ContactInfoOut(BaseModel):
+    contact_email: str
+    contact_phone: str
+    campus_hotline: str
+    campus_name: str
+    campus_address: str
+    campus_hours: str
+
 class UserRegisterIn(BaseModel):
     email: str = Field(min_length=5, max_length=120)
     password: str = Field(min_length=4, max_length=100)
@@ -143,6 +151,7 @@ class UserRegisterIn(BaseModel):
     department: Optional[str] = None
     specialty: Optional[str] = None
     phone: Optional[str] = None
+    avatar_url: Optional[str] = None
 
 class UserCreateIn(BaseModel):
     email: str = Field(min_length=5, max_length=120)
@@ -152,6 +161,7 @@ class UserCreateIn(BaseModel):
     department: Optional[str] = None
     specialty: Optional[str] = None
     phone: Optional[str] = None
+    avatar_url: Optional[str] = None
     organization_id: Optional[int] = 1
 
 class UserUpdateIn(BaseModel):
@@ -160,6 +170,7 @@ class UserUpdateIn(BaseModel):
     department: Optional[str] = None
     specialty: Optional[str] = None
     phone: Optional[str] = None
+    avatar_url: Optional[str] = None
     is_active: Optional[bool] = None
 
 class ProfileUpdateIn(BaseModel):
@@ -167,6 +178,7 @@ class ProfileUpdateIn(BaseModel):
     department: Optional[str] = None
     specialty: Optional[str] = None
     phone: Optional[str] = None
+    avatar_url: Optional[str] = None
     current_password: Optional[str] = None
     new_password: Optional[str] = None
 
@@ -184,6 +196,7 @@ class UserOut(BaseModel):
     specialty: Optional[str] = None
     phone: Optional[str] = None
     avatar_color: Optional[str] = "#00f2ff"
+    avatar_url: Optional[str] = None
     is_active: bool = True
     created_at: datetime
 

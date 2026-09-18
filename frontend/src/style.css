@@ -1,3 +1,21 @@
+@import url('https://fonts.cdnfonts.com/css/soria');
+
+@font-face {
+  font-family: 'Soria';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Soria'), url('https://fonts.cdnfonts.com/s/78809/Soria.woff') format('woff');
+}
+
+@font-face {
+  font-family: 'Soria';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Soria'), url('https://fonts.cdnfonts.com/s/78809/Soria-Bold.woff') format('woff');
+}
+
 /* =====================================================================
    AUOrbit Production Design System — Burnt Sienna Brand Identity
    Definitive Color System:
@@ -82,9 +100,83 @@
   --shadow-orange: 0 8px 25px -3px rgba(227, 83, 54, 0.28);
   --shadow-modal: 0 24px 44px 3px rgba(43, 33, 30, 0.16), 0 12px 30px 6px rgba(227, 83, 54, 0.12);
 
-  --font-heading: 'Sreda', Georgia, serif;
-  --font-sans: 'Playfair Display', Georgia, serif;
+  --font-heading: 'Tektur', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-secondary: 'Playfair Display', 'Soria', Georgia, serif;
+  --font-serif: 'Playfair Display', 'Soria', Georgia, 'Times New Roman', serif;
+  --font-display: 'Playfair Display', 'Soria', 'Tektur', Georgia, serif;
+  --font-cta: 'Playfair Display', 'Soria', 'Tektur', Georgia, serif;
+  --font-sans: 'Playfair Display', 'Soria', 'Sora', Georgia, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-body: 'Playfair Display', 'Soria', 'Sora', Georgia, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, Menlo, monospace;
+}
+
+/* =====================================================================
+   AUOrbit Production Dark Theme Token Matrix
+   ===================================================================== */
+[data-theme="dark"] {
+  /* Burnt Sienna & High-Contrast Glowing Amber */
+  --color-primary: #FF6B4A;
+  --color-primary-hover: #FF8266;
+  --color-primary-dark: #FF9E80;
+  --color-primary-soft: #FFA07A;
+  --color-primary-subtle: rgba(255, 107, 74, 0.14);
+  --color-primary-glow: rgba(255, 107, 74, 0.35);
+  --color-orange-vibrant: #FF7D47;
+  --color-orange-glow: rgba(255, 125, 71, 0.30);
+  --color-terracotta: #FF5A36;
+
+  /* Dark Background & Slate Obsidian Surfaces */
+  --color-background: #0D1117;
+  --bg-page: #0B0E14;
+  --bg-card: #151B23;
+  --bg-surface: #1E2530;
+  --bg-surface-hover: #262E3B;
+  --bg-dark-accent: #05070A;
+
+  /* Typography */
+  --color-text-dark: #F0F6FC;
+  --color-text: #C9D1D9;
+  --text-main: #F0F6FC;
+  --text-body: #C9D1D9;
+  --text-muted: #8B949E;
+  --text-dim: #6E7681;
+  --text-inverse: #0D1117;
+
+  /* Borders & Dividers */
+  --color-border: #30363D;
+  --border-subtle: #21262D;
+  --border-default: #30363D;
+  --border-strong: #484F58;
+  --border-focus: #FF6B4A;
+  --border-orange: rgba(255, 107, 74, 0.45);
+
+  /* Semantic Status Colors (High Contrast Dark Mode) */
+  --status-success-text: #3FB950;
+  --status-success-bg: rgba(46, 160, 67, 0.15);
+  --status-success-border: rgba(46, 160, 67, 0.4);
+
+  --status-warning-text: #D29922;
+  --status-warning-bg: rgba(187, 128, 9, 0.15);
+  --status-warning-border: rgba(187, 128, 9, 0.4);
+
+  --status-error-text: #F85149;
+  --status-error-bg: rgba(248, 81, 73, 0.15);
+  --status-error-border: rgba(248, 81, 73, 0.4);
+
+  --status-info-text: #58A6FF;
+  --status-info-bg: rgba(56, 139, 253, 0.15);
+  --status-info-border: rgba(56, 139, 253, 0.4);
+
+  --status-replan-text: #FFA657;
+  --status-replan-bg: rgba(219, 109, 40, 0.15);
+  --status-replan-border: rgba(219, 109, 40, 0.4);
+
+  /* Shadows */
+  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 8px 18px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 16px 32px rgba(0, 0, 0, 0.55);
+  --shadow-orange: 0 8px 28px rgba(255, 107, 74, 0.28);
+  --shadow-modal: 0 24px 50px rgba(0, 0, 0, 0.75);
 }
 
 * {
@@ -170,6 +262,26 @@ p {
 
 .mono {
   font-family: var(--font-mono);
+}
+
+.font-serif, .soria-serif {
+  font-family: var(--font-serif);
+}
+
+.font-secondary, .font-playfair {
+  font-family: var(--font-secondary);
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-heading {
+  font-family: var(--font-heading);
+}
+
+button, input, select, textarea {
+  font-family: inherit;
 }
 
 /* Contained Scroll Deck Utility */
@@ -1282,12 +1394,12 @@ a:hover {
    ===================================================================== */
 .theatrical-spotlight-container {
   position: absolute;
-  top: -80px;
+  top: -145px;
   left: 50%;
   transform: translateX(-50%);
-  width: 940px;
+  width: 960px;
   max-width: 98vw;
-  height: 380px;
+  height: 420px;
   pointer-events: none;
   z-index: 0;
   overflow: visible;
@@ -1299,13 +1411,13 @@ a:hover {
   top: 0;
   left: 50%;
   transform: translateX(-50%);
-  width: 920px;
+  width: 940px;
   max-width: 98vw;
-  height: 380px;
+  height: 420px;
   clip-path: polygon(46% 0%, 54% 0%, 100% 100%, 0% 100%);
   background: linear-gradient(180deg, 
-    rgba(255, 190, 120, 0.42) 0%, 
-    rgba(227, 83, 54, 0.22) 32%, 
+    rgba(255, 190, 120, 0.48) 0%, 
+    rgba(227, 83, 54, 0.24) 30%, 
     rgba(255, 140, 66, 0.10) 65%, 
     transparent 100%
   );
@@ -1325,21 +1437,21 @@ a:hover {
   top: 0;
   left: 50%;
   transform: translateX(-50%);
-  width: 920px;
+  width: 940px;
   max-width: 98vw;
-  height: 380px;
+  height: 420px;
   clip-path: polygon(46% 0%, 54% 0%, 100% 100%, 0% 100%);
   background: repeating-linear-gradient(
     95deg,
     transparent 0%,
-    rgba(255, 220, 140, 0.12) 4%,
+    rgba(255, 220, 140, 0.14) 4%,
     transparent 8%,
-    rgba(255, 160, 70, 0.08) 12%,
+    rgba(255, 160, 70, 0.09) 12%,
     transparent 16%
   );
   mix-blend-mode: screen;
   z-index: 2;
-  opacity: 0.55;
+  opacity: 0.6;
 }
 
 /* Suspended Golden Dust Motes */
@@ -1351,18 +1463,91 @@ a:hover {
   z-index: 3;
 }
 
-.mote-1 { width: 4px; height: 4px; top: 22%; left: 47%; animation: floatMote 7s ease-in-out infinite alternate; }
-.mote-2 { width: 5px; height: 5px; top: 38%; left: 52%; animation: floatMote 9s ease-in-out infinite alternate-reverse; }
-.mote-3 { width: 3px; height: 3px; top: 30%; left: 44%; animation: floatMote 6s ease-in-out infinite alternate; }
-.mote-4 { width: 4px; height: 4px; top: 52%; left: 56%; animation: floatMote 8s ease-in-out infinite alternate-reverse; }
-.mote-5 { width: 5px; height: 5px; top: 58%; left: 48%; animation: floatMote 10s ease-in-out infinite alternate; }
-.mote-6 { width: 3px; height: 3px; top: 45%; left: 40%; animation: floatMote 7.5s ease-in-out infinite alternate; }
-.mote-7 { width: 4px; height: 4px; top: 64%; left: 54%; animation: floatMote 8.5s ease-in-out infinite alternate-reverse; }
+.mote-1 { width: 4px; height: 4px; top: 18%; left: 47%; animation: floatMote 7s ease-in-out infinite alternate; }
+.mote-2 { width: 5px; height: 5px; top: 32%; left: 52%; animation: floatMote 9s ease-in-out infinite alternate-reverse; }
+.mote-3 { width: 3px; height: 3px; top: 25%; left: 44%; animation: floatMote 6s ease-in-out infinite alternate; }
+.mote-4 { width: 4px; height: 4px; top: 48%; left: 56%; animation: floatMote 8s ease-in-out infinite alternate-reverse; }
+.mote-5 { width: 5px; height: 5px; top: 54%; left: 48%; animation: floatMote 10s ease-in-out infinite alternate; }
+.mote-6 { width: 3px; height: 3px; top: 40%; left: 40%; animation: floatMote 7.5s ease-in-out infinite alternate; }
+.mote-7 { width: 4px; height: 4px; top: 60%; left: 54%; animation: floatMote 8.5s ease-in-out infinite alternate-reverse; }
 
 @keyframes floatMote {
   0% { transform: translate(0, 0) scale(0.8); opacity: 0.3; }
   50% { transform: translate(12px, -20px) scale(1.3); opacity: 0.95; }
   100% { transform: translate(-10px, 15px) scale(0.9); opacity: 0.4; }
+}
+
+/* =====================================================================
+   Audio Recording & Audio Playback Styles
+   ===================================================================== */
+.audio-zone-container {
+  background: var(--bg-card);
+  border: 1px dashed var(--border-default);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  transition: all 0.2s ease;
+}
+
+.audio-zone-container.recording {
+  border-color: var(--color-primary);
+  background: var(--color-primary-subtle);
+  box-shadow: 0 0 16px var(--color-primary-glow);
+}
+
+.audio-pulse-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  animation: audioRecordPulse 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes audioRecordPulse {
+  0% { transform: scale(0.9); opacity: 0.6; box-shadow: 0 0 0 0 rgba(227, 83, 54, 0.4); }
+  100% { transform: scale(1.3); opacity: 1; box-shadow: 0 0 10px 4px rgba(227, 83, 54, 0.6); }
+}
+
+.audio-player-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.85rem;
+}
+
+.waveform-bar {
+  width: 3px;
+  background: var(--color-primary);
+  border-radius: 2px;
+  animation: waveAnim 1s ease-in-out infinite alternate;
+}
+
+@keyframes waveAnim {
+  0% { height: 6px; opacity: 0.4; }
+  100% { height: 22px; opacity: 1; }
+}
+
+/* =====================================================================
+   Universal Cinematic Page & Text Entrance Keyframes
+   ===================================================================== */
+.page-fade-in {
+  animation: pageFadeIn 0.35s ease-out forwards;
+}
+
+@keyframes pageFadeIn {
+  0% { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.text-slide-stagger {
+  animation: textSlideUp 0.4s ease-out forwards;
+}
+
+@keyframes textSlideUp {
+  0% { opacity: 0; transform: translateY(12px); filter: blur(2px); }
+  100% { opacity: 1; transform: translateY(0); filter: blur(0); }
 }
 
 /* Auth Split Screen Responsive Behavior */
@@ -1379,6 +1564,7 @@ a:hover {
   .theatrical-spotlight-container {
     width: 380px;
     height: 320px;
+    top: -90px;
   }
   .spotlight-conic-shaft, .spotlight-rays-overlay {
     width: 380px;

@@ -137,24 +137,36 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
     if (!urls || urls.length === 0) {
       return (
         <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic', padding: '0.5rem 0' }}>
-          No visual attachments uploaded.
+          No attachments uploaded.
         </div>
       );
     }
     return (
-      <div className="media-preview-grid">
-        {urls.map((url, idx) => {
-          const isVideo = url.startsWith('data:video') || url.endsWith('.mp4') || url.endsWith('.webm');
-          return (
-            <div key={idx} className="media-preview-item" style={{ width: '130px', height: '95px' }}>
-              {isVideo ? (
-                <video src={url} controls style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : (
-                <img src={url} alt={`${label} ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              )}
-            </div>
-          );
-        })}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+        <div className="media-preview-grid">
+          {urls.map((url, idx) => {
+            const isAudio = url.startsWith('data:audio') || url.endsWith('.mp3') || url.endsWith('.wav') || url.endsWith('.ogg') || url.endsWith('.m4a');
+            const isVideo = !isAudio && (url.startsWith('data:video') || url.endsWith('.mp4') || url.endsWith('.webm'));
+
+            if (isAudio) {
+              return (
+                <div key={idx} className="audio-player-card" style={{ width: '100%', maxWidth: '280px', gridColumn: 'span 2' }}>
+                  <audio controls src={url} style={{ width: '100%', height: '36px' }} />
+                </div>
+              );
+            }
+
+            return (
+              <div key={idx} className="media-preview-item" style={{ width: '130px', height: '95px' }}>
+                {isVideo ? (
+                  <video src={url} controls style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <img src={url} alt={`${label} ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
     );
   };

@@ -250,16 +250,29 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
         </div>
 
         {/* Users Directory Table in Contained Scroll Container */}
-        <div className="table-scroll-container" style={{ maxHeight: '480px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', background: '#FFFFFF' }}>
-          <table className="table">
-          <thead>
+        <div 
+          className="table-scroll-container" 
+          style={{ 
+            maxHeight: '440px', 
+            overflowY: 'auto', 
+            overflowX: 'auto', 
+            scrollbarWidth: 'thin', 
+            scrollbarColor: 'var(--color-primary-soft) var(--bg-surface)', 
+            border: '1px solid var(--border-subtle)', 
+            borderRadius: 'var(--radius-sm)', 
+            background: '#FFFFFF',
+            boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.02)'
+          }}
+        >
+          <table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: '#FFFFFF' }}>
             <tr>
-              <th>User</th>
-              <th>Role Assignment</th>
-              <th>Department / Specialty</th>
-              <th>Status</th>
-              <th>Joined</th>
-              <th style={{ textAlign: 'right' }}>Actions</th>
+              <th style={{ background: 'var(--bg-surface)' }}>User</th>
+              <th style={{ background: 'var(--bg-surface)' }}>Role Assignment</th>
+              <th style={{ background: 'var(--bg-surface)' }}>Department / Specialty</th>
+              <th style={{ background: 'var(--bg-surface)' }}>Status</th>
+              <th style={{ background: 'var(--bg-surface)' }}>Joined</th>
+              <th style={{ textAlign: 'right', background: 'var(--bg-surface)' }}>Actions</th>
             </tr>
           </thead>
           <tbody>

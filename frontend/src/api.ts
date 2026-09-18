@@ -1,6 +1,7 @@
-import { Incident, Technician, Room, Equipment, TimetableItem, AnalyticsMetrics, User, AuthResponse } from './types';
+import { Incident, Technician, Room, Equipment, TimetableItem, AnalyticsMetrics, User, AuthResponse, ContactInfo } from './types';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const rawBase = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'http://localhost:8000/api').trim();
+const API_BASE = rawBase.endsWith('/api') ? rawBase : `${rawBase.replace(/\/$/, '')}/api`;
 
 export function getStoredToken(): string | null {
   return localStorage.getItem('auorbit_token');
@@ -215,19 +216,29 @@ export const api = {
   getAgentRunEvents: (runId: number) => request<any[]>(`/agent-runs/${runId}/events`),
   getIncidentRuns: (incidentId: number) => request<any[]>(`/incidents/${incidentId}/runs`),
 
+  // Contact & System Information
+  getContactInfo: () => request<ContactInfo>('/system/contact'),
+
+  // Media Upload (Audio, Photo, Video)
+  uploadMedia: (data: { media_url: string; type?: 'audio' | 'image' | 'video' }) =>
+    request<{ status: string; url: string; type: string; message: string }>('/media/upload', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+
   // Authentication & Registration
-  register: (data: { email: string; password: string; full_name: string; role: string; department?: string; specialty?: string; phone?: string }) =>
+  register: (data: { email: string; password: string; full_name: string; role: string; department?: string; specialty?: string; phone?: string; avatar_url?: string }) =>
     request<AuthResponse>('/auth/register', {
       method: 'POST',
       body: JSON.stringify(data)
     }),
-    login: (data: { email: string; password: string }) =>
+  login: (data: { email: string; password: string }) =>
     request<AuthResponse>('/auth/login', {
       method: 'POST',
       body: JSON.stringify(data)
     }),
   getMe: () => request<User>('/auth/me'),
-  updateProfile: (data: { full_name?: string; department?: string; specialty?: string; phone?: string; current_password?: string; new_password?: string }) =>
+  updateProfile: (data: { full_name?: string; department?: string; specialty?: string; phone?: string; avatar_url?: string; current_password?: string; new_password?: string }) =>
     request<User>('/auth/profile', {
       method: 'PUT',
       body: JSON.stringify(data)

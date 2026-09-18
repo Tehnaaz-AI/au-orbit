@@ -3,6 +3,7 @@ import { Incident, TimetableItem, Room, User } from '../types';
 import { api } from '../api';
 import { IncidentList } from './incidents/IncidentList';
 import { ReportIssueForm } from './reporting/ReportIssueForm';
+import { motion } from 'framer-motion';
 import { RotateCcw, GraduationCap, Calendar, CheckCircle2 } from 'lucide-react';
 
 interface FacultyPortalProps {
@@ -54,11 +55,16 @@ export const FacultyPortal: React.FC<FacultyPortalProps> = ({
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+    <motion.div 
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.28, ease: 'easeOut' }}
+      style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}
+    >
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div>
-          <h1 style={{ fontSize: '1.5rem', marginBottom: '0.2rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+          <h1 style={{ fontSize: '1.5rem', marginBottom: '0.2rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.45rem', fontFamily: 'var(--font-heading)' }}>
             <GraduationCap color="var(--color-primary)" size={22} />
             {activeTab === 'report_issue' ? 'Report Classroom / Department Issue' : 'Classroom & Department Operations'}
           </h1>
@@ -110,6 +116,6 @@ export const FacultyPortal: React.FC<FacultyPortalProps> = ({
           isVerifying={verifyingId !== null}
         />
       )}
-    </div>
+    </motion.div>
   );
 };

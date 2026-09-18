@@ -236,6 +236,7 @@ class User(Base):
     specialty: Mapped[str | None] = mapped_column(String(100), nullable=True)
     phone: Mapped[str | None] = mapped_column(String(30), nullable=True)
     avatar_color: Mapped[str | None] = mapped_column(String(30), nullable=True, default='#00f2ff')
+    avatar_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 

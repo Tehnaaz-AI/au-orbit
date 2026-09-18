@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shield, Info, Layers, Lock, Cpu, Sparkles, ExternalLink } from 'lucide-react';
+import { Shield, Info, Layers, Lock, Cpu, Sparkles, ExternalLink, Headphones } from 'lucide-react';
 
 interface FooterProps {
   onNavigate?: (tab: string) => void;
@@ -56,10 +56,21 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onSignIn, onGetStart
               <li>
                 <button 
                   type="button" 
-                  onClick={() => onNavigate && onNavigate('about')}
+                  onClick={() => onNavigate && onNavigate('contact')}
                   style={{ background: 'none', border: 'none', color: '#FF9E6C', cursor: 'pointer', padding: 0, font: 'inherit', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.35rem' }}
                 >
-                  <Info size={14} color="var(--color-primary-soft)" /> About AUOrbit System
+                  <Headphones size={14} color="var(--color-primary-soft)" /> Contact & Helpdesk Desk
+                </button>
+              </li>
+              <li>
+                <button 
+                  type="button" 
+                  onClick={() => onNavigate && onNavigate('about')}
+                  style={{ background: 'none', border: 'none', color: '#D4C5BD', cursor: 'pointer', padding: 0, font: 'inherit', transition: 'color 0.15s ease' }}
+                  onMouseOver={e => (e.currentTarget.style.color = '#FFFFFF')}
+                  onMouseOut={e => (e.currentTarget.style.color = '#D4C5BD')}
+                >
+                  About AUOrbit System
                 </button>
               </li>
               <li>

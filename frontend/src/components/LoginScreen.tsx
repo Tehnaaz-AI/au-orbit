@@ -90,7 +90,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const [regPassword, setRegPassword] = useState('');
   const [showRegPassword, setShowRegPassword] = useState(false);
   const [regRole, setRegRole] = useState<'STUDENT' | 'FACULTY'>('STUDENT');
-  const [regDepartment, setRegDepartment] = useState('Department of AI');
+  const [regDepartment, setRegDepartment] = useState('');
   const [regPhone, setRegPhone] = useState('');
 
   const [loading, setLoading] = useState(false);
@@ -401,17 +401,22 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               </div>
 
               {/* Form inputs */}
-              <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              <form onSubmit={handleLogin} autoComplete="off" style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label" style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>University Email</label>
                   <div style={{ position: 'relative' }}>
                     <input
                       type="email"
+                      name="au_user_email"
                       className="form-input"
                       value={loginEmail}
                       onChange={e => setLoginEmail(e.target.value)}
                       placeholder="user@anurag.edu.in"
                       required
+                      autoComplete="off"
+                      autoCorrect="off"
+                      autoCapitalize="none"
+                      spellCheck={false}
                       style={{ paddingLeft: '2.1rem', fontSize: '0.86rem', padding: '0.5rem 0.75rem 0.5rem 2.1rem' }}
                     />
                     <Mail size={15} color="var(--text-dim)" style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)' }} />
@@ -423,11 +428,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   <div style={{ position: 'relative' }}>
                     <input
                       type={showLoginPassword ? 'text' : 'password'}
+                      name="au_user_pass"
                       className="form-input"
                       value={loginPassword}
                       onChange={e => setLoginPassword(e.target.value)}
                       placeholder="••••••••"
                       required
+                      autoComplete="new-password"
+                      autoCorrect="off"
+                      autoCapitalize="none"
+                      spellCheck={false}
                       style={{ paddingLeft: '2.1rem', paddingRight: '2.1rem', fontSize: '0.86rem', padding: '0.5rem 2.1rem 0.5rem 2.1rem' }}
                     />
                     <Lock size={15} color="var(--text-dim)" style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)' }} />
@@ -451,7 +461,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
           {/* REGISTER VIEW */}
           {mode === 'REGISTER' && (
-            <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <form onSubmit={handleRegister} autoComplete="off" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label" style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Role</label>
@@ -482,8 +492,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   className="form-input"
                   value={regFullName}
                   onChange={e => setRegFullName(e.target.value)}
-                  placeholder="Full Name"
+                  placeholder="e.g. Ramesh Kumar"
                   required
+                  autoComplete="off"
                   style={{ padding: '0.45rem 0.65rem', fontSize: '0.84rem' }}
                 />
               </div>
@@ -497,6 +508,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   onChange={e => setRegEmail(e.target.value)}
                   placeholder="email@anurag.edu.in"
                   required
+                  autoComplete="off"
                   style={{ padding: '0.45rem 0.65rem', fontSize: '0.84rem' }}
                 />
               </div>
@@ -509,8 +521,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                     className="form-input"
                     value={regDepartment}
                     onChange={e => setRegDepartment(e.target.value)}
-                    placeholder="Department of AI"
-                    required
+                    placeholder="e.g. Artificial Intelligence"
+                    autoComplete="off"
                     style={{ padding: '0.45rem 0.65rem', fontSize: '0.84rem' }}
                   />
                 </div>
@@ -523,6 +535,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                     value={regPhone}
                     onChange={e => setRegPhone(e.target.value)}
                     placeholder="+91..."
+                    autoComplete="off"
                     style={{ padding: '0.45rem 0.65rem', fontSize: '0.84rem' }}
                   />
                 </div>
@@ -536,8 +549,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                     className="form-input"
                     value={regPassword}
                     onChange={e => setRegPassword(e.target.value)}
-                    placeholder="••••••••"
+                    placeholder="Min 4 characters"
                     required
+                    autoComplete="new-password"
                     style={{ padding: '0.45rem 2.1rem 0.45rem 0.65rem', fontSize: '0.84rem' }}
                   />
                   <button

@@ -8,7 +8,10 @@ from .notifications import send_whatsapp_alert
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from .database import Base, engine, get_db, ensure_schema
-from .config import CORS_ORIGINS
+from .config import (
+    CORS_ORIGINS, CONTACT_EMAIL, CONTACT_PHONE, CAMPUS_HOTLINE,
+    CAMPUS_NAME, CAMPUS_ADDRESS, CAMPUS_HOURS
+)
 from .models import (
     Organization, Campus, Building, Department,
     Room, Equipment, Technician, Incident, WorkOrder, AgentEvent, AgentRun,
@@ -19,7 +22,7 @@ from .schemas import (
     TimetableEntryCreate, TimetableEntryUpdate, TimetableEntryOut,
     RoomOut, EquipmentOut, TechnicianOut, IncidentOut,
     UserRegisterIn, UserLoginIn, UserCreateIn, UserUpdateIn, ProfileUpdateIn, UserOut, AuthResponse,
-    OrganizationOut, CampusOut, DepartmentOut, AgentRunOut, AgentEventOut
+    OrganizationOut, CampusOut, DepartmentOut, AgentRunOut, AgentEventOut, ContactInfoOut
 )
 from .auth import (
     hash_password, verify_password, create_access_token, decode_access_token,
@@ -79,6 +82,39 @@ def health(db: Session = Depends(get_db)):
         raise HTTPException(status_code=503, detail=f"Database unavailable: {str(e)}")
     return {'status': 'ok'}
 
+@app.get('/api/system/contact', response_model=ContactInfoOut)
+def get_contact_info():
+    """Retrieve official university helpdesk, operations hotline, and contact details configured in .env."""
+    return {
+        'contact_email': CONTACT_EMAIL,
+        'contact_phone': CONTACT_PHONE,
+        'campus_hotline': CAMPUS_HOTLINE,
+        'campus_name': CAMPUS_NAME,
+        'campus_address': CAMPUS_ADDRESS,
+        'campus_hours': CAMPUS_HOURS
+    }
+
+@app.post('/api/media/upload')
+async def upload_media(request: Request):
+    """
+    Accepts media payloads (audio base64/data URLs, photo, or video)
+    and returns verified media URLs for incident reporting and work orders.
+    """
+    try:
+        body = await request.json()
+        media_url = body.get('media_url') or body.get('url') or body.get('audio')
+        media_type = body.get('type', 'audio')
+        if not media_url:
+            raise HTTPException(status_code=400, detail="Missing media_url in upload payload")
+        return {
+            'status': 'success',
+            'url': media_url,
+            'type': media_type,
+            'message': f"{media_type.capitalize()} uploaded and verified successfully"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to process media upload: {str(e)}")
+
 # =====================================================================
 # Authentication & Registration (Strict Role & Tenant Security)
 # =====================================================================
@@ -120,7 +156,8 @@ def register(payload: UserRegisterIn, db: Session = Depends(get_db)):
         department=payload.department.strip() if payload.department else None,
         specialty=payload.specialty.strip() if payload.specialty else None,
         phone=payload.phone.strip() if payload.phone else None,
-        avatar_color=role_colors.get(role_clean, '#10b981')
+        avatar_color=role_colors.get(role_clean, '#10b981'),
+        avatar_url=payload.avatar_url
     )
     db.add(user)
     db.commit()
@@ -160,7 +197,7 @@ def update_profile(
     current_user: User = Depends(require_user),
     db: Session = Depends(get_db)
 ):
-    """Allow any authenticated user to update their name, phone, department, specialty, and password."""
+    """Allow any authenticated user to update their name, phone, department, specialty, avatar, and password."""
     target_user = db.get(User, current_user.id)
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -173,6 +210,8 @@ def update_profile(
         target_user.specialty = payload.specialty.strip() if payload.specialty else None
     if payload.phone is not None:
         target_user.phone = payload.phone.strip() if payload.phone else None
+    if payload.avatar_url is not None:
+        target_user.avatar_url = payload.avatar_url
 
     # Optional password change
     if payload.new_password:

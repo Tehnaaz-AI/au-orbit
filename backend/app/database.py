@@ -1,12 +1,7 @@
 import os
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
-
-DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///./auorbit.db')
-if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg://", 1)
-elif DATABASE_URL.startswith("postgresql://") and not DATABASE_URL.startswith("postgresql+"):
-    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg://", 1)
+from .config import DATABASE_URL
 
 if DATABASE_URL.startswith('sqlite'):
     connect_args = {'check_same_thread': False}
@@ -80,6 +75,8 @@ def ensure_schema(engine_to_check=None):
             cols = [c['name'] for c in inspector.get_columns('users')]
             if 'is_active' not in cols:
                 conn.execute(text("ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT 1;"))
+            if 'avatar_url' not in cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN avatar_url TEXT;"))
 
         conn.commit()
 

@@ -35,11 +35,16 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+    <motion.div 
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.28, ease: 'easeOut' }}
+      style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}
+    >
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div>
-          <h1 style={{ fontSize: '1.5rem', marginBottom: '0.2rem', color: 'var(--text-main)' }}>
+          <h1 style={{ fontSize: '1.5rem', marginBottom: '0.2rem', color: 'var(--text-main)', fontFamily: 'var(--font-heading)' }}>
             {activeTab === 'report_issue' ? 'Report a Campus Issue' : 'My Reported Issues'}
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>
@@ -85,6 +90,6 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
           showFilters={true}
         />
       )}
-    </div>
+    </motion.div>
   );
 };

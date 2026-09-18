@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
+import { motion, AnimatePresence } from 'framer-motion';
 import { api, getStoredToken, getStoredUser, setStoredToken, setStoredUser } from './api';
 import { 
   Incident, 
@@ -19,10 +20,16 @@ import { Dashboard } from './components/Dashboard';
 import { StudentPortal } from './components/StudentPortal';
 import { FacultyPortal } from './components/FacultyPortal';
 import { TechnicianPortal } from './components/TechnicianPortal';
-import { AdminConsole } from './components/AdminConsole';
+import { IncidentList } from './components/incidents/IncidentList';
+import { WorkOrderList } from './components/workorders/WorkOrderList';
+import { CampusHierarchyExplorer } from './components/spaces/CampusHierarchyExplorer';
+import { UserManagementView } from './components/admin/UserManagementView';
+import { TimetableManager } from './components/timetable/TimetableManager';
+import { AgentExecutionTracker } from './components/AgentExecutionTracker';
 import { IncidentDetailModal } from './components/IncidentDetailModal';
 import { AboutPage } from './components/pages/AboutPage';
 import { ProfilePage } from './components/pages/ProfilePage';
+import { ContactPage } from './components/pages/ContactPage';
 import { NotFoundPage } from './components/pages/NotFoundPage';
 import { Footer } from './components/Footer';
 import { OrbitBackground } from './components/OrbitBackground';
@@ -41,6 +48,14 @@ export function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(getStoredUser());
   const [showAuthScreen, setShowAuthScreen] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<string>('dashboard');
+
+  // Active Theme State (Default Light Mode as requested)
+  const [theme, setTheme] = useState<'light'>('light');
+
+  useEffect(() => {
+    document.documentElement.removeAttribute('data-theme');
+    localStorage.removeItem('auorbit_theme');
+  }, []);
 
   // Application Data State
   const [incidents, setIncidents] = useState<Incident[]>([]);
@@ -168,6 +183,31 @@ export function App() {
       );
     }
 
+    if (activeTab === 'contact') {
+      return (
+        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-page)' }}>
+          <Navbar
+            currentUser={null}
+            activeTab="contact"
+            onSelectTab={setActiveTab}
+            onSignIn={() => { setShowAuthScreen(true); setActiveTab('dashboard'); }}
+            onGetStarted={() => { setShowAuthScreen(true); setActiveTab('dashboard'); }}
+          />
+          <main style={{ flex: 1 }}>
+            <ContactPage 
+              onBackToApp={() => setActiveTab('landing')} 
+              onNavigateToLogin={() => { setShowAuthScreen(true); setActiveTab('dashboard'); }} 
+            />
+          </main>
+          <Footer
+            onNavigate={setActiveTab}
+            onSignIn={() => { setShowAuthScreen(true); setActiveTab('dashboard'); }}
+            onGetStarted={() => { setShowAuthScreen(true); setActiveTab('dashboard'); }}
+          />
+        </div>
+      );
+    }
+
     if (showAuthScreen) {
       return (
         <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-page)', position: 'relative' }}>
@@ -276,256 +316,247 @@ export function App() {
           </div>
         )}
 
-        {/* Tab: ABOUT AUORBIT */}
-        {activeTab === 'about' && (
-          <AboutPage onBackToApp={() => setActiveTab('dashboard')} />
-        )}
+        {/* Animated Tab Route Transitions */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+            style={{ width: '100%' }}
+          >
+            {/* Tab: ABOUT AUORBIT */}
+            {activeTab === 'about' && (
+              <AboutPage onBackToApp={() => setActiveTab('dashboard')} />
+            )}
 
-        {/* Tab 1: OVERVIEW / DASHBOARD */}
-        {activeTab === 'dashboard' && (
-          isTechnician ? (
-            <TechnicianPortal
-              currentUser={currentUser}
-              incidents={incidents}
-              technicians={technicians}
-              activeTab="overview"
-              onNavigateTab={setActiveTab}
-              onSelectIncident={setSelectedIncident}
-              onRefresh={refreshAll}
-              onError={showError}
-              onSuccess={showSuccess}
-            />
-          ) : (
-            <Dashboard
-              currentUser={currentUser}
-              incidents={incidents}
-              analytics={analytics}
-              onSelectIncident={setSelectedIncident}
-              onNavigateTab={setActiveTab}
-              onRefresh={refreshAll}
-              onError={showError}
-              onSuccess={showSuccess}
-            />
-          )
-        )}
+            {/* Tab: CONTACT HELPDESK */}
+            {activeTab === 'contact' && (
+              <ContactPage onBackToApp={() => setActiveTab('dashboard')} />
+            )}
 
-        {/* Tab 2: MY ISSUES / CLASSROOM ISSUES (Data View) */}
-        {activeTab === 'my_issues' && (
-          isStudent ? (
-            <StudentPortal
-              currentUser={currentUser}
-              incidents={incidents}
-              rooms={rooms}
-              activeTab="my_issues"
-              onSelectIncident={setSelectedIncident}
-              onNavigateTab={setActiveTab}
-              onRefresh={refreshAll}
-              onError={showError}
-              onSuccess={showSuccess}
-            />
-          ) : isFaculty ? (
-            <FacultyPortal
-              currentUser={currentUser}
-              incidents={incidents}
-              timetable={timetable}
-              rooms={rooms}
-              activeTab="my_issues"
-              onSelectIncident={setSelectedIncident}
-              onRefresh={refreshAll}
-              onError={showError}
-              onSuccess={showSuccess}
-            />
-          ) : (
-            <Dashboard
-              currentUser={currentUser}
-              incidents={incidents}
-              analytics={analytics}
-              onSelectIncident={setSelectedIncident}
-              onNavigateTab={setActiveTab}
-              onRefresh={refreshAll}
-              onError={showError}
-              onSuccess={showSuccess}
-            />
-          )
-        )}
+            {/* Tab 1: OVERVIEW / DASHBOARD */}
+            {activeTab === 'dashboard' && (
+              isTechnician ? (
+                <TechnicianPortal
+                  currentUser={currentUser}
+                  incidents={incidents}
+                  technicians={technicians}
+                  activeTab="overview"
+                  onNavigateTab={setActiveTab}
+                  onSelectIncident={setSelectedIncident}
+                  onRefresh={refreshAll}
+                  onError={showError}
+                  onSuccess={showSuccess}
+                />
+              ) : (
+                <Dashboard
+                  currentUser={currentUser}
+                  incidents={incidents}
+                  analytics={analytics}
+                  onSelectIncident={setSelectedIncident}
+                  onNavigateTab={setActiveTab}
+                  onRefresh={refreshAll}
+                  onError={showError}
+                  onSuccess={showSuccess}
+                />
+              )
+            )}
 
-        {/* Tab 3: REPORT ISSUE (Action Form Only) */}
-        {activeTab === 'report_issue' && (
-          isStudent ? (
-            <StudentPortal
-              currentUser={currentUser}
-              incidents={incidents}
-              rooms={rooms}
-              activeTab="report_issue"
-              onSelectIncident={setSelectedIncident}
-              onNavigateTab={setActiveTab}
-              onRefresh={refreshAll}
-              onError={showError}
-              onSuccess={showSuccess}
-            />
-          ) : isFaculty ? (
-            <FacultyPortal
-              currentUser={currentUser}
-              incidents={incidents}
-              timetable={timetable}
-              rooms={rooms}
-              activeTab="report_issue"
-              onSelectIncident={setSelectedIncident}
-              onRefresh={refreshAll}
-              onError={showError}
-              onSuccess={showSuccess}
-            />
-          ) : (
-            <Dashboard
-              currentUser={currentUser}
-              incidents={incidents}
-              analytics={analytics}
-              onSelectIncident={setSelectedIncident}
-              onNavigateTab={setActiveTab}
-              onRefresh={refreshAll}
-              onError={showError}
-              onSuccess={showSuccess}
-            />
-          )
-        )}
+            {/* Tab 2: MY ISSUES / CLASSROOM ISSUES */}
+            {activeTab === 'my_issues' && (
+              isStudent ? (
+                <StudentPortal
+                  currentUser={currentUser}
+                  incidents={incidents}
+                  rooms={rooms}
+                  activeTab="my_issues"
+                  onSelectIncident={setSelectedIncident}
+                  onNavigateTab={setActiveTab}
+                  onRefresh={refreshAll}
+                  onError={showError}
+                  onSuccess={showSuccess}
+                />
+              ) : isFaculty ? (
+                <FacultyPortal
+                  currentUser={currentUser}
+                  incidents={incidents}
+                  timetable={timetable}
+                  rooms={rooms}
+                  activeTab="my_issues"
+                  onSelectIncident={setSelectedIncident}
+                  onRefresh={refreshAll}
+                  onError={showError}
+                  onSuccess={showSuccess}
+                />
+              ) : (
+                <Dashboard
+                  currentUser={currentUser}
+                  incidents={incidents}
+                  analytics={analytics}
+                  onSelectIncident={setSelectedIncident}
+                  onNavigateTab={setActiveTab}
+                  onRefresh={refreshAll}
+                  onError={showError}
+                  onSuccess={showSuccess}
+                />
+              )
+            )}
 
-        {/* Tab 4: INCIDENTS (Admin & Ops Oversight) */}
-        {activeTab === 'incidents' && isAdmin && (
-          <AdminConsole
-            currentUser={currentUser}
-            incidents={incidents}
-            technicians={technicians}
-            rooms={rooms}
-            equipment={equipment}
-            timetable={timetable}
-            analytics={analytics}
-            activeSubTab="incidents"
-            onSelectIncident={setSelectedIncident}
-            onRefresh={refreshAll}
-            onError={showError}
-            onSuccess={showSuccess}
-          />
-        )}
+            {/* Tab 3: REPORT ISSUE (Action Form) */}
+            {activeTab === 'report_issue' && (
+              isStudent ? (
+                <StudentPortal
+                  currentUser={currentUser}
+                  incidents={incidents}
+                  rooms={rooms}
+                  activeTab="report_issue"
+                  onSelectIncident={setSelectedIncident}
+                  onNavigateTab={setActiveTab}
+                  onRefresh={refreshAll}
+                  onError={showError}
+                  onSuccess={showSuccess}
+                />
+              ) : isFaculty ? (
+                <FacultyPortal
+                  currentUser={currentUser}
+                  incidents={incidents}
+                  timetable={timetable}
+                  rooms={rooms}
+                  activeTab="report_issue"
+                  onSelectIncident={setSelectedIncident}
+                  onRefresh={refreshAll}
+                  onError={showError}
+                  onSuccess={showSuccess}
+                />
+              ) : (
+                <Dashboard
+                  currentUser={currentUser}
+                  incidents={incidents}
+                  analytics={analytics}
+                  onSelectIncident={setSelectedIncident}
+                  onNavigateTab={setActiveTab}
+                  onRefresh={refreshAll}
+                  onError={showError}
+                  onSuccess={showSuccess}
+                />
+              )
+            )}
 
-        {/* Tab 5: WORK ORDERS (Technician & Admin) */}
-        {activeTab === 'work_orders' && (
-          isTechnician ? (
-            <TechnicianPortal
-              currentUser={currentUser}
-              incidents={incidents}
-              technicians={technicians}
-              activeTab="work_orders"
-              onNavigateTab={setActiveTab}
-              onSelectIncident={setSelectedIncident}
-              onRefresh={refreshAll}
-              onError={showError}
-              onSuccess={showSuccess}
-            />
-          ) : (
-            <AdminConsole
-              currentUser={currentUser}
-              incidents={incidents}
-              technicians={technicians}
-              rooms={rooms}
-              equipment={equipment}
-              timetable={timetable}
-              analytics={analytics}
-              activeSubTab="work_orders"
-              onSelectIncident={setSelectedIncident}
-              onRefresh={refreshAll}
-              onError={showError}
-              onSuccess={showSuccess}
-            />
-          )
-        )}
+            {/* Tab 4: INCIDENTS (Dedicated Full Page) */}
+            {activeTab === 'incidents' && isAdmin && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <IncidentList
+                  incidents={incidents}
+                  onSelectIncident={setSelectedIncident}
+                  title="Campus Incident Stream"
+                  subtitle="All reported issues, autonomous triage priorities, and multi-agent dispatch states."
+                  showFilters={true}
+                />
+              </div>
+            )}
 
-        {/* Tab 6: CAMPUS RESOURCES & SPACES */}
-        {activeTab === 'resources' && isAdmin && (
-          <AdminConsole
-            currentUser={currentUser}
-            incidents={incidents}
-            technicians={technicians}
-            rooms={rooms}
-            equipment={equipment}
-            timetable={timetable}
-            analytics={analytics}
-            activeSubTab="resources"
-            onSelectIncident={setSelectedIncident}
-            onRefresh={refreshAll}
-            onError={showError}
-            onSuccess={showSuccess}
-          />
-        )}
+            {/* Tab 5: WORK ORDERS (Dedicated Full Page) */}
+            {activeTab === 'work_orders' && (
+              isTechnician ? (
+                <TechnicianPortal
+                  currentUser={currentUser}
+                  incidents={incidents}
+                  technicians={technicians}
+                  activeTab="work_orders"
+                  onNavigateTab={setActiveTab}
+                  onSelectIncident={setSelectedIncident}
+                  onRefresh={refreshAll}
+                  onError={showError}
+                  onSuccess={showSuccess}
+                />
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  <WorkOrderList
+                    incidents={incidents}
+                    currentUser={currentUser}
+                    technicians={technicians}
+                    onSelectIncident={setSelectedIncident}
+                    onRefresh={refreshAll}
+                    onError={showError}
+                    onSuccess={showSuccess}
+                    title="All Dispatched Work Orders"
+                    subtitle="Maintenance work orders assigned to campus specialists and technicians. Reassignment supported for Super Admins & Operations Heads."
+                  />
+                </div>
+              )
+            )}
 
-        {/* Tab 7: USER ROSTER & RBAC MANAGEMENT */}
-        {activeTab === 'users' && (isSuperAdmin || isOpsHead || isAdmin) && (
-          <AdminConsole
-            currentUser={currentUser}
-            incidents={incidents}
-            technicians={technicians}
-            rooms={rooms}
-            equipment={equipment}
-            timetable={timetable}
-            analytics={analytics}
-            activeSubTab="users"
-            onSelectIncident={setSelectedIncident}
-            onRefresh={refreshAll}
-            onError={showError}
-            onSuccess={showSuccess}
-          />
-        )}
+            {/* Tab 6: CAMPUS RESOURCES & SPACES (Dedicated Full Page) */}
+            {activeTab === 'resources' && isAdmin && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <CampusHierarchyExplorer
+                  rooms={rooms}
+                  equipment={equipment}
+                  currentUser={currentUser}
+                  onRefresh={refreshAll}
+                  onError={showError}
+                  onSuccess={showSuccess}
+                />
+              </div>
+            )}
 
-        {/* Tab 8: REFERENCE TIMETABLE */}
-        {activeTab === 'timetable' && isAdmin && (
-          <AdminConsole
-            currentUser={currentUser}
-            incidents={incidents}
-            technicians={technicians}
-            rooms={rooms}
-            equipment={equipment}
-            timetable={timetable}
-            analytics={analytics}
-            activeSubTab="timetable"
-            onSelectIncident={setSelectedIncident}
-            onRefresh={refreshAll}
-            onError={showError}
-            onSuccess={showSuccess}
-          />
-        )}
+            {/* Tab 7: USER ROSTER & RBAC MANAGEMENT (Dedicated Full Page) */}
+            {activeTab === 'users' && (isSuperAdmin || isOpsHead || isAdmin) && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <UserManagementView
+                  currentUser={currentUser}
+                  onError={showError}
+                  onSuccess={showSuccess}
+                />
+              </div>
+            )}
 
-        {/* Tab 9: AGENT TELEMETRY */}
-        {activeTab === 'agent_runs' && isAdmin && (
-          <AdminConsole
-            currentUser={currentUser}
-            incidents={incidents}
-            technicians={technicians}
-            rooms={rooms}
-            equipment={equipment}
-            timetable={timetable}
-            analytics={analytics}
-            activeSubTab="agent_runs"
-            onSelectIncident={setSelectedIncident}
-            onRefresh={refreshAll}
-            onError={showError}
-            onSuccess={showSuccess}
-          />
-        )}
+            {/* Tab 8: REFERENCE TIMETABLE (Dedicated Full Page) */}
+            {activeTab === 'timetable' && isAdmin && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <TimetableManager
+                  timetable={timetable}
+                  rooms={rooms}
+                  onRefresh={refreshAll}
+                  onError={showError}
+                  onSuccess={showSuccess}
+                />
+              </div>
+            )}
 
-        {/* Tab 10: USER PROFILE & SECURITY */}
-        {activeTab === 'profile' && (
-          <ProfilePage
-            currentUser={currentUser}
-            onUpdateUser={setCurrentUser}
-            onBackToApp={() => setActiveTab('dashboard')}
-            onError={showError}
-            onSuccess={showSuccess}
-          />
-        )}
+            {/* Tab 9: AGENT TELEMETRY (Dedicated Full Page) */}
+            {activeTab === 'agent_runs' && isAdmin && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <AgentExecutionTracker
+                  incident={selectedIncident || incidents[0]}
+                  allIncidents={incidents}
+                  onSelectIncident={setSelectedIncident}
+                  onRefresh={refreshAll}
+                  onError={showError}
+                  onSuccess={showSuccess}
+                />
+              </div>
+            )}
 
-        {/* Fallback 404 for unknown tab */}
-        {!['about', 'dashboard', 'my_issues', 'report_issue', 'incidents', 'work_orders', 'resources', 'users', 'timetable', 'agent_runs', 'profile'].includes(activeTab) && (
-          <NotFoundPage onBackToDashboard={() => setActiveTab('dashboard')} />
-        )}
+            {/* Tab 10: USER PROFILE & SECURITY */}
+            {activeTab === 'profile' && (
+              <ProfilePage
+                currentUser={currentUser}
+                onUpdateUser={setCurrentUser}
+                onBackToApp={() => setActiveTab('dashboard')}
+                onError={showError}
+                onSuccess={showSuccess}
+              />
+            )}
+
+            {/* Fallback 404 for unknown tab */}
+            {!['about', 'contact', 'dashboard', 'my_issues', 'report_issue', 'incidents', 'work_orders', 'resources', 'users', 'timetable', 'agent_runs', 'profile'].includes(activeTab) && (
+              <NotFoundPage onBackToDashboard={() => setActiveTab('dashboard')} onNavigateTab={setActiveTab} />
+            )}
+          </motion.div>
+        </AnimatePresence>
 
       </main>
 

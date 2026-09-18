@@ -9,6 +9,15 @@ export interface Organization {
   created_at: string;
 }
 
+export interface ContactInfo {
+  contact_email: string;
+  contact_phone: string;
+  campus_hotline: string;
+  campus_name: string;
+  campus_address: string;
+  campus_hours: string;
+}
+
 export interface User {
   id: number;
   organization_id: number;
@@ -19,6 +28,7 @@ export interface User {
   specialty?: string | null;
   phone?: string | null;
   avatar_color?: string;
+  avatar_url?: string | null;
   is_active?: boolean;
   created_at: string;
 }

@@ -108,7 +108,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onSignIn
               alignItems: 'center', 
               gap: '0.65rem', 
               padding: '0.4rem 1.15rem', 
-              background: 'rgba(255, 255, 255, 0.95)', 
+              background: 'var(--bg-card)', 
               backdropFilter: 'blur(12px)',
               borderRadius: 'var(--radius-full)', 
               border: '1px solid var(--border-default)',
@@ -118,24 +118,61 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onSignIn
           >
             <span className="pulse-dot" />
             <img src="/logo.png" alt="AUOrbit" style={{ height: 22, objectFit: 'contain' }} />
-            <span style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--primary-dark)', letterSpacing: '0.04em', textTransform: 'uppercase', fontFamily: 'var(--font-heading)' }}>
-              Autonomous Operations
+            <span style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--color-primary-dark)', letterSpacing: '0.04em', textTransform: 'uppercase', fontFamily: 'var(--font-heading)' }}>
+              Autonomous Campus Operations
             </span>
           </motion.div>
 
           <motion.h1 
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, delay: 0.08 }}
+            initial="hidden"
+            animate="visible"
+            variants={{
+              hidden: { opacity: 0 },
+              visible: {
+                opacity: 1,
+                transition: { staggerChildren: 0.09, delayChildren: 0.05 }
+              }
+            }}
             style={{ fontSize: 'clamp(2.3rem, 4.8vw, 3.6rem)', lineHeight: 1.15, marginBottom: '1.25rem', color: 'var(--text-main)', letterSpacing: '-0.03em', fontFamily: 'var(--font-heading)', fontWeight: 800 }}
           >
-            From campus complaint to verified resolution — <span className="word-highlight">autonomously</span> <span className="word-highlight-soft">coordinated.</span>
+            {["From", "campus", "complaint", "to", "verified", "resolution", "—"].map((word, i) => (
+              <motion.span
+                key={i}
+                variants={{
+                  hidden: { opacity: 0, y: 18, filter: 'blur(4px)' },
+                  visible: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.45, ease: 'easeOut' } }
+                }}
+                style={{ display: 'inline-block', marginRight: '0.3em' }}
+              >
+                {word}
+              </motion.span>
+            ))}
+            <motion.span
+              variants={{
+                hidden: { opacity: 0, y: 18, filter: 'blur(4px)' },
+                visible: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.45, ease: 'easeOut' } }
+              }}
+              className="word-highlight"
+              style={{ display: 'inline-block', marginRight: '0.3em' }}
+            >
+              autonomously
+            </motion.span>
+            <motion.span
+              variants={{
+                hidden: { opacity: 0, y: 18, filter: 'blur(4px)' },
+                visible: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.45, ease: 'easeOut' } }
+              }}
+              className="word-highlight-soft"
+              style={{ display: 'inline-block' }}
+            >
+              coordinated.
+            </motion.span>
           </motion.h1>
 
           <motion.p 
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, delay: 0.16 }}
+            initial={{ opacity: 0, y: 16, filter: 'blur(2px)' }}
+            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+            transition={{ duration: 0.55, delay: 0.35 }}
             style={{ fontSize: '1.12rem', color: 'var(--text-body)', maxWidth: '740px', margin: '0 auto 2rem', lineHeight: 1.6 }}
           >
             AUOrbit orchestrates <span className="word-highlight-soft">multimodal reporting</span>, real timetable context, <span className="word-highlight">specialist dispatch</span>, side-by-side Before/After verification, and <span className="word-highlight-soft">self-healing</span> replanning loops across campus facilities.
