@@ -103,6 +103,16 @@ def ensure_schema(engine_to_check=None):
                 if 'avatar_url' not in cols:
                     conn.execute(text("ALTER TABLE users ADD COLUMN avatar_url TEXT;"))
 
+            # Expand agent_events column sizes for long reasoning summaries and action descriptions
+            if eng.dialect.name == 'postgresql' and 'agent_events' in existing_tables:
+                try:
+                    conn.execute(text("ALTER TABLE agent_events ALTER COLUMN action TYPE TEXT;"))
+                    conn.execute(text("ALTER TABLE agent_events ALTER COLUMN agent TYPE VARCHAR(255);"))
+                    conn.execute(text("ALTER TABLE agent_events ALTER COLUMN tool TYPE VARCHAR(255);"))
+                    conn.execute(text("ALTER TABLE agent_events ALTER COLUMN status TYPE VARCHAR(100);"))
+                except Exception as _ex:
+                    logger.debug(f"Column type upgrade notice: {_ex}")
+
             conn.commit()
     except Exception as e:
         logger.warning(f"Database schema initialization notice: {e}. Switching to resilient local SQLite storage.")
