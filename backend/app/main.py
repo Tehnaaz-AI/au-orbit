@@ -49,7 +49,6 @@ from .services import (
     find_available_technicians, find_facilities
 )
 
-ensure_schema(engine)
 app = FastAPI(title='AUOrbit Multi-Tenant API', version='1.0.0')
 
 # Configure CORS cleanly
@@ -65,11 +64,15 @@ app.add_middleware(
 
 @app.on_event('startup')
 def start():
-    ensure_schema(engine)
-    from .database import SessionLocal
-    db = SessionLocal()
-    seed(db)
-    db.close()
+    try:
+        ensure_schema(engine)
+        from .database import SessionLocal
+        db = SessionLocal()
+        seed(db)
+        db.close()
+    except Exception as e:
+        import logging
+        logging.getLogger("auorbit").warning(f"Startup initialization notice: {e}")
 
 from sqlalchemy import text
 
