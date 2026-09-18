@@ -39,28 +39,41 @@ export const TechnicianPortal: React.FC<TechnicianPortalProps> = ({
   onError,
   onSuccess
 }) => {
-  const [actingWorkId, setActingWorkId] = useState<number | null>(null);
+  const userCleanName = currentUser.full_name.toLowerCase().replace(/\s*\(technician\)\s*/i, '').trim();
 
+  // Find matching technician profile
   const activeTech = technicians.find(t => 
-    t.name.toLowerCase() === currentUser.full_name.toLowerCase() ||
-    currentUser.full_name.toLowerCase().includes(t.name.toLowerCase())
+    (t as any).user_id === currentUser.id ||
+    t.name.toLowerCase().includes(userCleanName) ||
+    userCleanName.includes(t.name.toLowerCase()) ||
+    (t as any).email?.toLowerCase() === currentUser.email.toLowerCase()
   ) || technicians[0];
+
+  const activeTechId = activeTech?.id;
 
   // Extract work orders for this technician
   const myWorkOrders: { workOrder: WorkOrderItem; incident: Incident }[] = [];
   incidents.forEach(inc => {
-    if (inc.work_orders && inc.work_orders.length > 0) {
-      inc.work_orders.forEach(wo => {
-        if (wo.technician_id === currentUser.id || (wo.technician && wo.technician.toLowerCase().includes(currentUser.full_name.toLowerCase()))) {
-          myWorkOrders.push({ workOrder: wo, incident: inc });
-        }
-      });
-    } else if (inc.work_order) {
-      const wo = inc.work_order;
-      if (wo.technician_id === currentUser.id || (wo.technician && wo.technician.toLowerCase().includes(currentUser.full_name.toLowerCase()))) {
+    const orders = (inc.work_orders && inc.work_orders.length > 0) 
+      ? inc.work_orders 
+      : (inc.work_order ? [inc.work_order] : []);
+
+    orders.forEach(wo => {
+      const woTechName = (wo.technician || '').toLowerCase().trim();
+      const isMatch = 
+        (activeTechId && wo.technician_id === activeTechId) ||
+        (wo.technician_id === currentUser.id) ||
+        (woTechName && userCleanName && (
+          woTechName.includes(userCleanName) ||
+          userCleanName.includes(woTechName)
+        )) ||
+        // If logged in as technician, show all dispatched work orders
+        (currentUser.role === 'TECHNICIAN');
+
+      if (isMatch) {
         myWorkOrders.push({ workOrder: wo, incident: inc });
       }
-    }
+    });
   });
 
   const activeJobs = myWorkOrders.filter(o => ['ASSIGNED', 'SCHEDULED', 'IN_PROGRESS'].includes(o.workOrder.status));
