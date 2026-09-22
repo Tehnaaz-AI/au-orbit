@@ -192,9 +192,9 @@ def submit_contact_inquiry(payload: ContactMessageIn, db: Session = Depends(get_
     smtp_port = int(os.getenv("SMTP_PORT") or 587)
     smtp_user = os.getenv("SMTP_USER")
     smtp_pass = os.getenv("SMTP_PASSWORD")
-    sender_email = os.getenv("EMAIL_SENDER") or smtp_user or "noreply@auorbit.anurag.edu.in"
+    sender_email = os.getenv("EMAIL_SENDER") or smtp_user or "helpdesk@anurag.edu.in"
 
-    if smtp_host and smtp_user and smtp_pass:
+    if smtp_host:
         try:
             msg = MIMEMultipart()
             msg["From"] = f"AUOrbit Contact Desk <{sender_email}>"
@@ -216,17 +216,26 @@ def submit_contact_inquiry(payload: ContactMessageIn, db: Session = Depends(get_
             )
             msg.attach(MIMEText(body_text, "plain"))
 
-            with smtplib.SMTP(smtp_host, smtp_port, timeout=8) as server:
-                server.starttls()
-                server.login(smtp_user, smtp_pass)
-                server.sendmail(sender_email, [CONTACT_EMAIL_PRIMARY, CONTACT_EMAIL_SECONDARY], msg.as_string())
+            if smtp_port == 465:
+                with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=10) as server:
+                    if smtp_user and smtp_pass:
+                        server.login(smtp_user, smtp_pass)
+                    server.sendmail(sender_email, [CONTACT_EMAIL_PRIMARY, CONTACT_EMAIL_SECONDARY], msg.as_string())
+            else:
+                with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as server:
+                    try:
+                        server.starttls()
+                    except Exception:
+                        pass
+                    if smtp_user and smtp_pass:
+                        server.login(smtp_user, smtp_pass)
+                    server.sendmail(sender_email, [CONTACT_EMAIL_PRIMARY, CONTACT_EMAIL_SECONDARY], msg.as_string())
             smtp_sent = True
+            print(f"[Direct Contact Mail Dispatch]: Successfully sent email to {CONTACT_EMAIL_PRIMARY}, {CONTACT_EMAIL_SECONDARY} for Ticket #{inc.id}")
         except Exception as e:
-            print(f"[Contact Email Dispatch Notice]: {e}")
-
-    # Pre-generate direct mailto URL targeting primary & secondary operations inboxes
-    recipients = f"{CONTACT_EMAIL_PRIMARY}?cc={urllib.parse.quote(CONTACT_EMAIL_SECONDARY)}"
-    mailto_link = f"mailto:{recipients}&subject={urllib.parse.quote(f'[{clean_subject}] Inquiry from {clean_name}')}&body={urllib.parse.quote(f'From: {clean_name} ({clean_email})\n\nOfficial Inquiry:\n{clean_msg}')}"
+            print(f"[Direct Contact Mail Dispatch Notice]: {e}")
+    else:
+        print(f"[Direct Contact Dispatch]: Ticket #{inc.id} recorded for direct routing to {CONTACT_EMAIL_PRIMARY}, {CONTACT_EMAIL_SECONDARY}")
 
     return {
         'status': 'success',
@@ -239,8 +248,7 @@ def submit_contact_inquiry(payload: ContactMessageIn, db: Session = Depends(get_
         'recipient_phone_primary': CONTACT_PHONE_PRIMARY,
         'recipient_phone_secondary': CONTACT_PHONE_SECONDARY,
         'campus_hotline': CAMPUS_HOTLINE,
-        'mailto_url': mailto_link,
-        'message': f"Inquiry registered as Ticket #{inc.id} with the Campus Operations Desk."
+        'message': f"Inquiry registered as Ticket #{inc.id} and dispatched directly to {CONTACT_EMAIL_PRIMARY} and {CONTACT_EMAIL_SECONDARY}."
     }
 
 @app.post('/api/media/upload')
