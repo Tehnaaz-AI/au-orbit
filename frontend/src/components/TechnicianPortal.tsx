@@ -55,11 +55,22 @@ export const TechnicianPortal: React.FC<TechnicianPortalProps> = ({
   // Extract work orders for this technician
   const myWorkOrders: { workOrder: WorkOrderItem; incident: Incident }[] = [];
   incidents.forEach(inc => {
+    // Strictly skip space allocation tickets - technicians only handle physical maintenance
+    if (
+      inc.category === 'SPACE_ALLOCATION' || 
+      inc.understanding?.resolution_type === 'SPACE_REALLOCATION' ||
+      inc.space_allocation_decision?.reallocated ||
+      inc.understanding?.requires_technician === false
+    ) {
+      return;
+    }
+
     const orders = (inc.work_orders && inc.work_orders.length > 0) 
       ? inc.work_orders 
       : (inc.work_order ? [inc.work_order] : []);
 
     orders.forEach(wo => {
+      if (!wo || !wo.id) return;
       const woTechName = (wo.technician || '').toLowerCase().trim();
       const isMatch = 
         (activeTechId && wo.technician_id === activeTechId) ||
@@ -67,9 +78,7 @@ export const TechnicianPortal: React.FC<TechnicianPortalProps> = ({
         (woTechName && userCleanName && (
           woTechName.includes(userCleanName) ||
           userCleanName.includes(woTechName)
-        )) ||
-        // If logged in as technician, show all dispatched work orders
-        (currentUser.role === 'TECHNICIAN');
+        ));
 
       if (isMatch) {
         myWorkOrders.push({ workOrder: wo, incident: inc });

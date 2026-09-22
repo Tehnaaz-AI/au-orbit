@@ -1000,11 +1000,33 @@ a:hover {
   align-items: center;
   gap: 0.35rem;
   list-style: none;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(227, 83, 54, 0.4) transparent;
+  -webkit-overflow-scrolling: touch;
+  padding: 0.2rem 0;
+}
+
+.nav-links::-webkit-scrollbar {
+  height: 3px;
+}
+
+.nav-links::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.nav-links::-webkit-scrollbar-thumb {
+  background: rgba(227, 83, 54, 0.35);
+  border-radius: 4px;
+}
+
+.nav-links::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary);
 }
 
 .nav-item {
   padding: 0.42rem 0.85rem;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-sm);
   font-size: 0.82rem;
   font-weight: 600;
   color: var(--text-body);
@@ -1016,7 +1038,9 @@ a:hover {
   gap: 0.4rem;
   background: transparent;
   border: 1px solid transparent;
+  border-bottom: 2px solid transparent;
   font-family: var(--font-sans);
+  white-space: nowrap;
 }
 
 .nav-item:hover {
@@ -1029,8 +1053,9 @@ a:hover {
   background: var(--color-primary-subtle);
   color: var(--color-primary-dark);
   border-color: var(--color-primary-soft);
-  font-weight: 700;
-  box-shadow: 0 1px 3px rgba(227, 83, 54, 0.08);
+  border-bottom: 2px solid var(--color-primary);
+  font-weight: 800;
+  box-shadow: 0 1px 4px rgba(227, 83, 54, 0.12);
 }
 
 /* Dominant Color Word Highlights & Emphasis System (Square Geometry) */

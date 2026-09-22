@@ -54,6 +54,37 @@ export const FacultyPortal: React.FC<FacultyPortalProps> = ({
     }
   }
 
+  // Filter strictly to department reported issues or issues reported by this faculty member
+  const facultyDept = (currentUser.department || 'AI').toLowerCase();
+  const deptIncidents = incidents.filter(i => {
+    // 1. Reported by this faculty member
+    const isSelfReported = (
+      i.reporter?.toLowerCase().includes(currentUser.full_name.toLowerCase()) ||
+      i.reporter?.toLowerCase().includes(currentUser.email.toLowerCase())
+    );
+    if (isSelfReported) return true;
+
+    // 2. Reported by someone from the same department
+    const isDeptReporter = i.reporter_department && (
+      i.reporter_department.toLowerCase().includes(facultyDept) ||
+      facultyDept.includes(i.reporter_department.toLowerCase())
+    );
+    if (isDeptReporter) return true;
+
+    // 3. Room belongs to this faculty member's department
+    const roomObj = rooms.find(r => r.code === i.room_code);
+    const isDeptRoom = roomObj?.department && (
+      roomObj.department.toLowerCase().includes(facultyDept) ||
+      facultyDept.includes(roomObj.department.toLowerCase())
+    );
+    if (isDeptRoom) return true;
+
+    // 4. Incident description / branch references faculty department
+    if (i.description && i.description.toLowerCase().includes(facultyDept)) return true;
+
+    return false;
+  });
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
@@ -66,12 +97,12 @@ export const FacultyPortal: React.FC<FacultyPortalProps> = ({
         <div>
           <h1 style={{ fontSize: '1.5rem', marginBottom: '0.2rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.45rem', fontFamily: 'var(--font-heading)' }}>
             <GraduationCap color="var(--color-primary)" size={22} />
-            {activeTab === 'report_issue' ? 'Report Classroom / Department Issue' : 'Classroom & Department Operations'}
+            {activeTab === 'report_issue' ? 'Report Classroom / Department Issue' : `${currentUser.department || 'Department'} Operations`}
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>
             {activeTab === 'report_issue'
               ? 'Report lecture hall or departmental technical problems with automatic timetable-based escalation.'
-              : 'Classroom maintenance tracking, instructional priority escalation, and faculty sign-off verification.'}
+              : `Tracking maintenance orders scoped to ${currentUser.department || 'your department'} with sign-off verification.`}
           </p>
         </div>
 
@@ -104,12 +135,12 @@ export const FacultyPortal: React.FC<FacultyPortalProps> = ({
       {/* VIEW 2: CLASSROOM & DEPT ISSUES */}
       {activeTab === 'my_issues' && (
         <IncidentList
-          incidents={incidents}
+          incidents={deptIncidents}
           onSelectIncident={onSelectIncident || (() => {})}
-          title="Department Incidents"
-          subtitle="All classroom and academic facility maintenance orders with sign-off verification."
-          emptyTitle="No classroom issues currently reported"
-          emptyDescription="Classroom and lab issues requiring faculty awareness or sign-off will appear here."
+          title={`${currentUser.department || 'Department'} Incidents`}
+          subtitle={`All classroom and academic facility maintenance orders for ${currentUser.department || 'your department'} with sign-off verification.`}
+          emptyTitle="No department issues currently reported"
+          emptyDescription={`Issues reported for ${currentUser.department || 'your department'} classrooms will appear here.`}
           showFilters={true}
           showVerificationActions={true}
           onVerify={handleVerification}

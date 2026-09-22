@@ -20,6 +20,7 @@ import {
   Check, 
   Flame,
   Users,
+  Building2,
   ShieldCheck,
   CheckCircle2,
   Lock
@@ -135,7 +136,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onSignIn
             }}
             style={{ fontSize: 'clamp(2.3rem, 4.8vw, 3.6rem)', lineHeight: 1.15, marginBottom: '1.25rem', color: 'var(--text-main)', letterSpacing: '-0.03em', fontFamily: 'var(--font-heading)', fontWeight: 800 }}
           >
-            {["From", "campus", "complaint", "to", "verified", "resolution", "—"].map((word, i) => (
+            {["From", "campus", "complaint", "to", "verified", "resolution",].map((word, i) => (
               <motion.span
                 key={i}
                 variants={{
@@ -324,8 +325,193 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onSignIn
         </div>
       </section>
 
-      {/* 3. PRODUCT PREVIEW: LIVE TIMELINE & SELF-HEALING */}
-      <section id="architecture" style={{ padding: '5rem 1.5rem', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-page)' }}>
+      {/* 3. CAPABILITIES & AUTONOMOUS PLATFORM FEATURES */}
+      <section id="capabilities" style={{ padding: '5.5rem 1.5rem', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-page)', position: 'relative' }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+          
+          <motion.div 
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-80px" }}
+            variants={containerVariants}
+            style={{ textAlign: 'center', marginBottom: '3rem' }}
+          >
+            <motion.span variants={itemVariants} style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--primary-dark)', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: 'var(--font-heading)' }}>
+              Autonomous Campus Intelligence
+            </motion.span>
+            <motion.h2 variants={itemVariants} style={{ fontSize: '2.1rem', marginTop: '0.35rem', color: 'var(--text-main)', fontFamily: 'var(--font-heading)' }}>
+              Core Operational Capabilities
+            </motion.h2>
+            <motion.p variants={itemVariants} style={{ color: 'var(--text-muted)', fontSize: '0.96rem', maxWidth: '680px', margin: '0.5rem auto 0', lineHeight: 1.6 }}>
+              Purpose-built multi-agent engines resolving physical infrastructure, timetable conflicts, space shortages, and specialist execution with zero administrative delay.
+            </motion.p>
+          </motion.div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
+            
+            {/* Capability 1: Natural Language & LLM Intake */}
+            <motion.div 
+              whileHover={{ y: -5, boxShadow: 'var(--shadow-md)' }}
+              transition={{ duration: 0.2 }}
+              className="card card-interactive"
+              style={{ padding: '1.6rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}
+            >
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                  <div style={{ width: 44, height: 44, borderRadius: 'var(--radius-sm)', background: 'rgba(227, 83, 54, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary-dark)' }}>
+                    <Cpu size={22} />
+                  </div>
+                  <span className="badge badge-primary">Groq / Llama 3.3</span>
+                </div>
+                <h3 style={{ fontSize: '1.15rem', color: 'var(--text-main)', marginBottom: '0.45rem', fontFamily: 'var(--font-heading)' }}>
+                  Multimodal Intake & Understanding
+                </h3>
+                <p style={{ fontSize: '0.86rem', color: 'var(--text-body)', lineHeight: 1.6 }}>
+                  Extracts defect category, exact room codes, affected equipment, and severity directly from unstructured student reports, images, and audio notes.
+                </p>
+              </div>
+              <div style={{ marginTop: '1.25rem', paddingTop: '0.85rem', borderTop: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                <CheckCircle2 size={13} color="var(--primary-dark)" /> Deterministic fallback resilience
+              </div>
+            </motion.div>
+
+            {/* Capability 2: Timetable & Lecture Context */}
+            <motion.div 
+              whileHover={{ y: -5, boxShadow: 'var(--shadow-md)' }}
+              transition={{ duration: 0.2 }}
+              className="card card-interactive"
+              style={{ padding: '1.6rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}
+            >
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                  <div style={{ width: 44, height: 44, borderRadius: 'var(--radius-sm)', background: 'rgba(227, 83, 54, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary-dark)' }}>
+                    <Calendar size={22} />
+                  </div>
+                  <span className="badge badge-warning">Live Timetable Sync</span>
+                </div>
+                <h3 style={{ fontSize: '1.15rem', color: 'var(--text-main)', marginBottom: '0.45rem', fontFamily: 'var(--font-heading)' }}>
+                  Spatial & Academic Timetable Awareness
+                </h3>
+                <p style={{ fontSize: '0.86rem', color: 'var(--text-body)', lineHeight: 1.6 }}>
+                  Cross-references live instructional timetables, exams, and room schedules to dynamically escalate issues impacting active lectures into emergencies.
+                </p>
+              </div>
+              <div style={{ marginTop: '1.25rem', paddingTop: '0.85rem', borderTop: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                <CheckCircle2 size={13} color="var(--primary-dark)" /> Zero lecture interruption windows
+              </div>
+            </motion.div>
+
+            {/* Capability 3: Autonomous Space & Seating Allocation */}
+            <motion.div 
+              whileHover={{ y: -5, boxShadow: 'var(--shadow-md)' }}
+              transition={{ duration: 0.2 }}
+              className="card card-interactive"
+              style={{ padding: '1.6rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}
+            >
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                  <div style={{ width: 44, height: 44, borderRadius: 'var(--radius-sm)', background: 'rgba(227, 83, 54, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary-dark)' }}>
+                    <Layers size={22} />
+                  </div>
+                  <span className="badge badge-success">Smart Space Agent</span>
+                </div>
+                <h3 style={{ fontSize: '1.15rem', color: 'var(--text-main)', marginBottom: '0.45rem', fontFamily: 'var(--font-heading)' }}>
+                  Autonomous Space Reallocation
+                </h3>
+                <p style={{ fontSize: '0.86rem', color: 'var(--text-body)', lineHeight: 1.6 }}>
+                  Distinguishes seating shortages and room overcrowding from physical hardware damage, immediately reallocating classes to vacant nearby halls without dispatching technicians.
+                </p>
+              </div>
+              <div style={{ marginTop: '1.25rem', paddingTop: '0.85rem', borderTop: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                <CheckCircle2 size={13} color="var(--primary-dark)" /> Instant classroom reallocation
+              </div>
+            </motion.div>
+
+            {/* Capability 4: Specialist Scoring Matrix */}
+            <motion.div 
+              whileHover={{ y: -5, boxShadow: 'var(--shadow-md)' }}
+              transition={{ duration: 0.2 }}
+              className="card card-interactive"
+              style={{ padding: '1.6rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}
+            >
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                  <div style={{ width: 44, height: 44, borderRadius: 'var(--radius-sm)', background: 'rgba(227, 83, 54, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary-dark)' }}>
+                    <Wrench size={22} />
+                  </div>
+                  <span className="badge badge-role">Specialist Matching</span>
+                </div>
+                <h3 style={{ fontSize: '1.15rem', color: 'var(--text-main)', marginBottom: '0.45rem', fontFamily: 'var(--font-heading)' }}>
+                  Specialist Scoring & Dispatch Matrix
+                </h3>
+                <p style={{ fontSize: '0.86rem', color: 'var(--text-body)', lineHeight: 1.6 }}>
+                  Evaluates registered technicians across AV, IT Networks, Plumbing, and HVAC by skill compatibility, active shift status, and current task queue.
+                </p>
+              </div>
+              <div style={{ marginTop: '1.25rem', paddingTop: '0.85rem', borderTop: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                <CheckCircle2 size={13} color="var(--primary-dark)" /> Fair workload distribution
+              </div>
+            </motion.div>
+
+            {/* Capability 5: Verifiable Dual-Proof Visual Audit */}
+            <motion.div 
+              whileHover={{ y: -5, boxShadow: 'var(--shadow-md)' }}
+              transition={{ duration: 0.2 }}
+              className="card card-interactive"
+              style={{ padding: '1.6rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}
+            >
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                  <div style={{ width: 44, height: 44, borderRadius: 'var(--radius-sm)', background: 'rgba(227, 83, 54, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary-dark)' }}>
+                    <ShieldCheck size={22} />
+                  </div>
+                  <span className="badge badge-success">Mandatory Photo Proof</span>
+                </div>
+                <h3 style={{ fontSize: '1.15rem', color: 'var(--text-main)', marginBottom: '0.45rem', fontFamily: 'var(--font-heading)' }}>
+                  Side-by-Side Dual Visual Verification
+                </h3>
+                <p style={{ fontSize: '0.86rem', color: 'var(--text-body)', lineHeight: 1.6 }}>
+                  Enforces mandatory photographic evidence from technicians before completion. Faculty and Ops Heads audit Before vs After proofs before final sign-off.
+                </p>
+              </div>
+              <div style={{ marginTop: '1.25rem', paddingTop: '0.85rem', borderTop: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                <CheckCircle2 size={13} color="var(--primary-dark)" /> Tamper-evident completion logs
+              </div>
+            </motion.div>
+
+            {/* Capability 6: Self-Healing Replanning Loop */}
+            <motion.div 
+              whileHover={{ y: -5, boxShadow: 'var(--shadow-md)' }}
+              transition={{ duration: 0.2 }}
+              className="card card-interactive"
+              style={{ padding: '1.6rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}
+            >
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                  <div style={{ width: 44, height: 44, borderRadius: 'var(--radius-sm)', background: 'rgba(227, 83, 54, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary-dark)' }}>
+                    <RefreshCw size={22} />
+                  </div>
+                  <span className="badge badge-primary">Self-Healing Loop</span>
+                </div>
+                <h3 style={{ fontSize: '1.15rem', color: 'var(--text-main)', marginBottom: '0.45rem', fontFamily: 'var(--font-heading)' }}>
+                  Autonomous Recovery & Replan
+                </h3>
+                <p style={{ fontSize: '0.86rem', color: 'var(--text-body)', lineHeight: 1.6 }}>
+                  If visual verification fails or defects persist, the system excludes previous technicians and autonomously re-assigns higher-tier specialists without human intervention.
+                </p>
+              </div>
+              <div style={{ marginTop: '1.25rem', paddingTop: '0.85rem', borderTop: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                <CheckCircle2 size={13} color="var(--primary-dark)" /> Automated escalation guarantees
+              </div>
+            </motion.div>
+
+          </div>
+
+        </div>
+      </section>
+
+      {/* 4. PRODUCT PREVIEW: LIVE TIMELINE & SELF-HEALING */}
+      <section id="architecture" style={{ padding: '5rem 1.5rem', borderBottom: '1px solid var(--border-subtle)', background: '#FFFFFF' }}>
         <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
           
           <motion.div 

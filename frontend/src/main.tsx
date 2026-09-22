@@ -48,6 +48,7 @@ export function App() {
   // Authentication State
   const [currentUser, setCurrentUser] = useState<User | null>(getStoredUser());
   const [showAuthScreen, setShowAuthScreen] = useState<boolean>(false);
+  const [authMode, setAuthMode] = useState<'LOGIN' | 'REGISTER'>('LOGIN');
   const [activeTab, setActiveTab] = useState<string>('dashboard');
 
   // Active Theme State (Default Light Mode as requested)
@@ -160,25 +161,36 @@ export function App() {
     showSuccess('You have been securely signed out.');
   };
 
+  const openAuth = (mode: 'LOGIN' | 'REGISTER') => {
+    setAuthMode(mode);
+    setShowAuthScreen(true);
+  };
+
   // 1. PUBLIC VISITOR EXPERIENCE
+  // Unauthenticated Public Flow
   if (!currentUser) {
+    const handlePublicNavigate = (tab: string) => {
+      setShowAuthScreen(false);
+      setActiveTab(tab);
+    };
+
     if (activeTab === 'about') {
       return (
         <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-page)' }}>
           <Navbar
             currentUser={null}
             activeTab="about"
-            onSelectTab={setActiveTab}
-            onSignIn={() => { setShowAuthScreen(true); setActiveTab('dashboard'); }}
-            onGetStarted={() => { setShowAuthScreen(true); setActiveTab('dashboard'); }}
+            onSelectTab={handlePublicNavigate}
+            onSignIn={() => openAuth('LOGIN')}
+            onGetStarted={() => openAuth('REGISTER')}
           />
           <main style={{ flex: 1 }}>
-            <AboutPage onBackToApp={() => setActiveTab('landing')} />
+            <AboutPage onBackToApp={() => handlePublicNavigate('landing')} />
           </main>
           <Footer
-            onNavigate={setActiveTab}
-            onSignIn={() => { setShowAuthScreen(true); setActiveTab('dashboard'); }}
-            onGetStarted={() => { setShowAuthScreen(true); setActiveTab('dashboard'); }}
+            onNavigate={handlePublicNavigate}
+            onSignIn={() => openAuth('LOGIN')}
+            onGetStarted={() => openAuth('REGISTER')}
           />
         </div>
       );
@@ -190,20 +202,20 @@ export function App() {
           <Navbar
             currentUser={null}
             activeTab="contact"
-            onSelectTab={setActiveTab}
-            onSignIn={() => { setShowAuthScreen(true); setActiveTab('dashboard'); }}
-            onGetStarted={() => { setShowAuthScreen(true); setActiveTab('dashboard'); }}
+            onSelectTab={handlePublicNavigate}
+            onSignIn={() => openAuth('LOGIN')}
+            onGetStarted={() => openAuth('REGISTER')}
           />
           <main style={{ flex: 1 }}>
             <ContactPage 
-              onBackToApp={() => setActiveTab('landing')} 
-              onNavigateToLogin={() => { setShowAuthScreen(true); setActiveTab('dashboard'); }} 
+              onBackToApp={() => handlePublicNavigate('landing')} 
+              onNavigateToLogin={() => openAuth('LOGIN')} 
             />
           </main>
           <Footer
-            onNavigate={setActiveTab}
-            onSignIn={() => { setShowAuthScreen(true); setActiveTab('dashboard'); }}
-            onGetStarted={() => { setShowAuthScreen(true); setActiveTab('dashboard'); }}
+            onNavigate={handlePublicNavigate}
+            onSignIn={() => openAuth('LOGIN')}
+            onGetStarted={() => openAuth('REGISTER')}
           />
         </div>
       );
@@ -215,9 +227,9 @@ export function App() {
           <OrbitBackground />
           <Navbar
             currentUser={null}
-            onSelectTab={() => setShowAuthScreen(false)}
-            onSignIn={() => setShowAuthScreen(true)}
-            onGetStarted={() => setShowAuthScreen(true)}
+            onSelectTab={handlePublicNavigate}
+            onSignIn={() => openAuth('LOGIN')}
+            onGetStarted={() => openAuth('REGISTER')}
           />
 
           {toast && (
@@ -231,6 +243,7 @@ export function App() {
           <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1.25rem', position: 'relative', zIndex: 1 }}>
             <LoginScreen
               onLoginSuccess={handleLoginSuccess}
+              initialMode={authMode}
               onError={showError}
               onSuccess={showSuccess}
               onBackToLanding={() => setShowAuthScreen(false)}
@@ -238,9 +251,9 @@ export function App() {
           </main>
 
           <Footer
-            onNavigate={setActiveTab}
-            onSignIn={() => setShowAuthScreen(true)}
-            onGetStarted={() => setShowAuthScreen(true)}
+            onNavigate={handlePublicNavigate}
+            onSignIn={() => openAuth('LOGIN')}
+            onGetStarted={() => openAuth('REGISTER')}
           />
         </div>
       );
@@ -252,9 +265,9 @@ export function App() {
         <Navbar
           currentUser={null}
           activeTab={activeTab}
-          onSelectTab={setActiveTab}
-          onSignIn={() => setShowAuthScreen(true)}
-          onGetStarted={() => setShowAuthScreen(true)}
+          onSelectTab={handlePublicNavigate}
+          onSignIn={() => openAuth('LOGIN')}
+          onGetStarted={() => openAuth('REGISTER')}
         />
 
         {toast && (
@@ -267,16 +280,16 @@ export function App() {
 
         <main style={{ flex: 1, position: 'relative', zIndex: 1 }}>
           <LandingPage
-            onGetStarted={() => setShowAuthScreen(true)}
-            onSignIn={() => setShowAuthScreen(true)}
-            onTestScenario={() => setShowAuthScreen(true)}
+            onGetStarted={() => openAuth('REGISTER')}
+            onSignIn={() => openAuth('LOGIN')}
+            onTestScenario={() => openAuth('LOGIN')}
           />
         </main>
 
         <Footer
-          onNavigate={setActiveTab}
-          onSignIn={() => setShowAuthScreen(true)}
-          onGetStarted={() => setShowAuthScreen(true)}
+          onNavigate={handlePublicNavigate}
+          onSignIn={() => openAuth('LOGIN')}
+          onGetStarted={() => openAuth('REGISTER')}
         />
       </div>
     );
@@ -521,6 +534,10 @@ export function App() {
                 <TimetableManager
                   timetable={timetable}
                   rooms={rooms}
+                  currentUser={currentUser}
+                  onRefresh={refreshAll}
+                  onError={showError}
+                  onSuccess={showSuccess}
                 />
               </div>
             )}

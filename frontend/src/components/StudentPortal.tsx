@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Incident, Room, User } from '../types';
 import { IncidentList } from './incidents/IncidentList';
 import { ReportIssueForm } from './reporting/ReportIssueForm';
 import { RotateCcw } from 'lucide-react';
+import { api } from '../api';
 
 interface StudentPortalProps {
   currentUser: User;
@@ -28,11 +29,36 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
   onError,
   onSuccess
 }) => {
+  const [verifyingId, setVerifyingId] = useState<number | null>(null);
+
   // Scoped strictly to incidents reported by this student
   const myIncidents = incidents.filter(i => 
     i.reporter.toLowerCase().includes(currentUser.full_name.toLowerCase()) ||
     i.reporter.toLowerCase().includes(currentUser.email.toLowerCase())
   );
+
+  // Student verification handler
+  async function handleVerification(workOrderId: number, outcome: 'pass' | 'fail') {
+    setVerifyingId(workOrderId);
+    try {
+      await api.workOrderAction(workOrderId, 'verify', {
+        outcome,
+        notes: outcome === 'pass' 
+          ? `Student verified by ${currentUser.full_name}: Equipment/facility issue resolved.` 
+          : `Student rejected by ${currentUser.full_name}: Issue still persists.`
+      });
+      if (outcome === 'pass') {
+        onSuccess('Resolution verified by student. Incident closed.');
+      } else {
+        onError('Verification rejected. Replanning loop triggered for specialist re-dispatch.');
+      }
+      onRefresh();
+    } catch (err: any) {
+      onError(err.message || 'Verification failed');
+    } finally {
+      setVerifyingId(null);
+    }
+  }
 
   return (
     <motion.div 
@@ -50,7 +76,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
           <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>
             {activeTab === 'report_issue' 
               ? 'Submit issues for classrooms, labs, or campus facilities for autonomous multi-agent dispatch.'
-              : 'Track real-time operational triage, technician dispatch, and resolution status for your reports.'}
+              : 'Track real-time operational triage, technician dispatch, and verify resolution once repaired.'}
           </p>
         </div>
 
@@ -83,8 +109,10 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
         <IncidentList
           incidents={myIncidents}
           onSelectIncident={onSelectIncident || (() => {})}
+          onVerify={handleVerification}
+          isVerifying={verifyingId !== null}
           title="My Issues"
-          subtitle="All maintenance and facility requests submitted by you."
+          subtitle="All maintenance and facility requests submitted by you. You can verify or re-open completed work orders."
           emptyTitle="You haven't reported any issues yet"
           emptyDescription="When you report a broken projector, power fault, or facility problem, it will appear here with live tracking."
           showFilters={true}

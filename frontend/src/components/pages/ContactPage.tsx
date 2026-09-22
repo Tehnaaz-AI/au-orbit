@@ -24,9 +24,13 @@ interface ContactPageProps {
 
 export const ContactPage: React.FC<ContactPageProps> = ({ onBackToApp, onNavigateToLogin }) => {
   const [contactInfo, setContactInfo] = useState<ContactInfo>({
-    contact_email: import.meta.env.VITE_CONTACT_EMAIL || 'support@auorbit.edu.in',
-    contact_phone: import.meta.env.VITE_CONTACT_PHONE || '+91 40 2345 6789',
-    campus_hotline: '+91 40 2345 9999',
+    contact_email_primary: '24eg106c58@anurag.edu.in',
+    contact_email_secondary: '24eg106c63@anurag.edu.in',
+    contact_phone_primary: '+91 9281478453',
+    contact_phone_secondary: '+91 9490572567',
+    contact_email: '24eg106c58@anurag.edu.in',
+    contact_phone: '+91 9281478453',
+    campus_hotline: '+91 9281478453',
     campus_name: 'Anurag University Main Campus',
     campus_address: 'Venkatapur, Ghatkesar, Hyderabad, Telangana 500088',
     campus_hours: 'Monday - Saturday: 08:30 AM - 05:30 PM (24/7 AI Triage)'
@@ -50,6 +54,11 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onBackToApp, onNavigat
       });
   }, []);
 
+  const primaryEmail = contactInfo.contact_email_primary || contactInfo.contact_email || '24eg106c58@anurag.edu.in';
+  const secondaryEmail = contactInfo.contact_email_secondary || '24eg106c63@anurag.edu.in';
+  const primaryPhone = contactInfo.contact_phone_primary || contactInfo.contact_phone || '+91 9281478453';
+  const secondaryPhone = contactInfo.contact_phone_secondary || '+91 9490572567';
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!senderEmail.trim() || !message.trim()) return;
@@ -64,14 +73,19 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onBackToApp, onNavigat
       });
       setSubmissionResult(res);
       setSubmitted(true);
+      if (res.mailto_url) {
+        // Direct email client invocation
+        window.location.href = res.mailto_url;
+      }
     } catch (err) {
       console.warn('Backend contact submission fallback:', err);
-      const mailto = `mailto:${contactInfo.contact_email}?subject=${encodeURIComponent(subject.trim() || 'Campus Inquiry')}&body=${encodeURIComponent(`From: ${senderName} (${senderEmail})\n\n${message}`)}`;
+      const mailto = `mailto:${primaryEmail}?cc=${encodeURIComponent(secondaryEmail)}&subject=${encodeURIComponent(subject.trim() || 'Campus Inquiry')}&body=${encodeURIComponent(`From: ${senderName} (${senderEmail})\n\n${message}`)}`;
       setSubmissionResult({
-        recipient_email: contactInfo.contact_email,
+        recipient_email: primaryEmail,
         mailto_url: mailto
       });
       setSubmitted(true);
+      window.location.href = mailto;
     } finally {
       setLoading(false);
     }
@@ -98,7 +112,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onBackToApp, onNavigat
             Contact & Support Center
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.94rem', maxWidth: '650px' }}>
-            Reach out to our campus operations desk, submit institutional feedback, or dispatch emergency escalation teams.
+            Reach out to our campus operations desk, submit institutional inquiries, or reach emergency escalation teams directly.
           </p>
         </div>
 
@@ -120,7 +134,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onBackToApp, onNavigat
         {/* Left Column: Direct Contact Info Channels */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           
-          {/* Email Support Card */}
+          {/* Dual Email Support Card */}
           <motion.div 
             whileHover={{ y: -2 }}
             className="card" 
@@ -139,23 +153,40 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onBackToApp, onNavigat
             }}>
               <Mail size={22} />
             </div>
-            <div>
+            <div style={{ width: '100%' }}>
               <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--color-primary-dark)', letterSpacing: '0.05em' }}>
-                Official Support Email
+                Official Campus Operations Inboxes
               </div>
-              <a 
-                href={`mailto:${contactInfo.contact_email}`}
-                style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)', textDecoration: 'none', display: 'block', marginTop: '0.2rem' }}
-              >
-                {contactInfo.contact_email}
-              </a>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+              
+              <div style={{ marginTop: '0.4rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                <div>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>Primary Helpdesk:</span>
+                  <a 
+                    href={`mailto:${primaryEmail}`}
+                    style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-main)', textDecoration: 'none', display: 'block' }}
+                  >
+                    {primaryEmail}
+                  </a>
+                </div>
+
+                <div>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>Secondary / Emergency Desk:</span>
+                  <a 
+                    href={`mailto:${secondaryEmail}`}
+                    style={{ fontSize: '0.94rem', fontWeight: 700, color: 'var(--primary-dark)', textDecoration: 'none', display: 'block' }}
+                  >
+                    {secondaryEmail}
+                  </a>
+                </div>
+              </div>
+
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.45rem' }}>
                 Response time within 2 hours during active academic schedule hours.
               </div>
             </div>
           </motion.div>
 
-          {/* Helpdesk Phone Card */}
+          {/* Dual Phone Support Card */}
           <motion.div 
             whileHover={{ y: -2 }}
             className="card" 
@@ -174,18 +205,35 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onBackToApp, onNavigat
             }}>
               <Phone size={22} />
             </div>
-            <div>
+            <div style={{ width: '100%' }}>
               <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--color-primary-dark)', letterSpacing: '0.05em' }}>
-                Helpdesk Phone & Line
+                Helpdesk Phone Lines
               </div>
-              <a 
-                href={`tel:${contactInfo.contact_phone}`}
-                style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)', textDecoration: 'none', display: 'block', marginTop: '0.2rem' }}
-              >
-                {contactInfo.contact_phone}
-              </a>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                Operational Helpdesk Support: {contactInfo.campus_hours}
+              
+              <div style={{ marginTop: '0.4rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                <div>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>Primary Helpdesk Line:</span>
+                  <a 
+                    href={`tel:${primaryPhone}`}
+                    style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-main)', textDecoration: 'none', display: 'block' }}
+                  >
+                    {primaryPhone}
+                  </a>
+                </div>
+
+                <div>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>Secondary Dispatch Line:</span>
+                  <a 
+                    href={`tel:${secondaryPhone}`}
+                    style={{ fontSize: '0.94rem', fontWeight: 700, color: 'var(--color-orange-vibrant)', textDecoration: 'none', display: 'block' }}
+                  >
+                    {secondaryPhone}
+                  </a>
+                </div>
+              </div>
+
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.45rem' }}>
+                Operational Hours: {contactInfo.campus_hours}
               </div>
             </div>
           </motion.div>

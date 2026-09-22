@@ -51,12 +51,15 @@ export const Navbar: React.FC<NavbarProps> = ({
     if (onSelectTab) {
       onSelectTab('landing');
     }
-    setTimeout(() => {
+    const attemptScroll = (retries = 6) => {
       const el = document.getElementById(sectionId);
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else if (retries > 0) {
+        setTimeout(() => attemptScroll(retries - 1), 50);
       }
-    }, 50);
+    };
+    setTimeout(() => attemptScroll(), 40);
   };
 
   // 1. Public Visitor Navbar

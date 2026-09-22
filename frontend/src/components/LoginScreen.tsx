@@ -27,6 +27,7 @@ interface LoginScreenProps {
   onError: (msg: string) => void;
   onSuccess: (msg: string) => void;
   onBackToLanding?: () => void;
+  initialMode?: 'LOGIN' | 'REGISTER';
 }
 
 const DEMO_PRESETS = [
@@ -80,13 +81,24 @@ const DEMO_PRESETS = [
   }
 ];
 
+export const SPECIALTY_OPTIONS = [
+  'General Hardware & AV',
+  'Hardware & Projector Specialist',
+  'Plumber / Sanitation Specialist',
+  'IT & Network Support Specialist',
+  'HVAC & Cooling Technician',
+  'Electrical & Power Specialist',
+  'Facility & Civil Maintenance'
+];
+
 export const LoginScreen: React.FC<LoginScreenProps> = ({
   onLoginSuccess,
   onError,
   onSuccess,
-  onBackToLanding
+  onBackToLanding,
+  initialMode = 'LOGIN'
 }) => {
-  const [mode, setMode] = useState<'LOGIN' | 'REGISTER'>('LOGIN');
+  const [mode, setMode] = useState<'LOGIN' | 'REGISTER'>(initialMode);
 
   // Login Form
   const [loginEmail, setLoginEmail] = useState('');
@@ -98,7 +110,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [showRegPassword, setShowRegPassword] = useState(false);
-  const [regRole, setRegRole] = useState<'STUDENT' | 'FACULTY'>('STUDENT');
+  const [regRole, setRegRole] = useState<'STUDENT' | 'FACULTY' | 'TECHNICIAN'>('STUDENT');
+  const [regSpecialty, setRegSpecialty] = useState<string>(SPECIALTY_OPTIONS[0]);
   const [regDepartment, setRegDepartment] = useState('');
   const [regPhone, setRegPhone] = useState('');
 
@@ -139,20 +152,31 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
+    const cleanEmail = regEmail.trim().toLowerCase();
+    
+    // Domain Validation for Student and Faculty
+    if (['STUDENT', 'FACULTY'].includes(regRole)) {
+      if (!cleanEmail.endsWith('@anurag.edu.in')) {
+        onError('Student and Faculty registrations must use an official @anurag.edu.in email address.');
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       const res = await api.register({
-        email: regEmail.trim(),
+        email: cleanEmail,
         password: regPassword,
         full_name: regFullName.trim(),
         role: regRole,
-        department: regDepartment.trim(),
+        department: regRole !== 'TECHNICIAN' ? regDepartment.trim() : 'Operations & Maintenance',
+        specialty: regRole === 'TECHNICIAN' ? regSpecialty : undefined,
         phone: regPhone.trim() || undefined
       });
       setStoredToken(res.token);
       setStoredUser(res.user);
       onLoginSuccess(res.user);
-      onSuccess(`Account created for ${res.user.full_name}`);
+      onSuccess(`Account created for ${res.user.full_name} (${res.user.role === 'TECHNICIAN' ? regSpecialty : res.user.role})`);
     } catch (err: any) {
       onError(err.message || 'Registration failed');
     } finally {
@@ -513,17 +537,18 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                       color: 'var(--text-main)'
                     }}
                   >
-                    <GraduationCap size={12} color="#A0522D" /> Fill Student Demo
+                    <GraduationCap size={12} color="#A0522D" /> Student Demo
                   </button>
                   <button
                     type="button"
                     onClick={() => {
                       const rand = Math.floor(100 + Math.random() * 900);
-                      setRegFullName(`Prof. Srinivas V. (${rand})`);
-                      setRegEmail(`srinivas.${rand}@anurag.edu.in`);
-                      setRegRole('FACULTY');
-                      setRegDepartment('Department of CSE');
-                      setRegPhone('+91 98456 12345');
+                      setRegFullName(`Ravi Kumar (${rand})`);
+                      setRegEmail(`ravi.specialist.${rand}@anurag.edu.in`);
+                      setRegRole('TECHNICIAN');
+                      setRegSpecialty('Plumber / Sanitation Specialist');
+                      setRegDepartment('Operations & Maintenance');
+                      setRegPhone('+91 98490 54321');
                       setRegPassword('password123');
                     }}
                     style={{
@@ -542,7 +567,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                       color: 'var(--text-main)'
                     }}
                   >
-                    <BookOpen size={12} color="#E35336" /> Fill Faculty Demo
+                    <Wrench size={12} color="#D97706" /> Specialist Demo
                   </button>
                 </div>
               </div>
@@ -550,82 +575,115 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               <form onSubmit={handleRegister} autoComplete="off" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label" style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Role</label>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem' }}>
-                  <button
-                    type="button"
-                    className={`btn btn-sm ${regRole === 'STUDENT' ? 'btn-primary' : 'btn-secondary'}`}
-                    onClick={() => setRegRole('STUDENT')}
-                    style={{ padding: '0.35rem', fontSize: '0.8rem' }}
-                  >
-                    Student
-                  </button>
-                  <button
-                    type="button"
-                    className={`btn btn-sm ${regRole === 'FACULTY' ? 'btn-primary' : 'btn-secondary'}`}
-                    onClick={() => setRegRole('FACULTY')}
-                    style={{ padding: '0.35rem', fontSize: '0.8rem' }}
-                  >
-                    Faculty
-                  </button>
+                  <label className="form-label" style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Select Role Category</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.2fr', gap: '0.35rem' }}>
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${regRole === 'STUDENT' ? 'btn-primary' : 'btn-secondary'}`}
+                      onClick={() => setRegRole('STUDENT')}
+                      style={{ padding: '0.35rem', fontSize: '0.78rem' }}
+                    >
+                      <GraduationCap size={13} /> Student
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${regRole === 'FACULTY' ? 'btn-primary' : 'btn-secondary'}`}
+                      onClick={() => setRegRole('FACULTY')}
+                      style={{ padding: '0.35rem', fontSize: '0.78rem' }}
+                    >
+                      <BookOpen size={13} /> Faculty
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${regRole === 'TECHNICIAN' ? 'btn-primary' : 'btn-secondary'}`}
+                      onClick={() => setRegRole('TECHNICIAN')}
+                      style={{ padding: '0.35rem', fontSize: '0.78rem' }}
+                    >
+                      <Wrench size={13} /> Field Specialist
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Full Name</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={regFullName}
-                  onChange={e => setRegFullName(e.target.value)}
-                  placeholder="e.g. Ramesh Kumar"
-                  required
-                  autoComplete="off"
-                  style={{ padding: '0.45rem 0.65rem', fontSize: '0.84rem' }}
-                />
-              </div>
+                {regRole === 'TECHNICIAN' && (
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label" style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Field Specialty / Domain *</label>
+                    <select
+                      className="form-select"
+                      value={regSpecialty}
+                      onChange={e => setRegSpecialty(e.target.value)}
+                      style={{ fontSize: '0.84rem', padding: '0.45rem 0.65rem' }}
+                    >
+                      {SPECIALTY_OPTIONS.map(opt => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>University Email</label>
-                <input
-                  type="email"
-                  className="form-input"
-                  value={regEmail}
-                  onChange={e => setRegEmail(e.target.value)}
-                  placeholder="email@anurag.edu.in"
-                  required
-                  autoComplete="off"
-                  style={{ padding: '0.45rem 0.65rem', fontSize: '0.84rem' }}
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label" style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Department</label>
+                  <label className="form-label" style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Full Name *</label>
                   <input
                     type="text"
                     className="form-input"
-                    value={regDepartment}
-                    onChange={e => setRegDepartment(e.target.value)}
-                    placeholder="e.g. Artificial Intelligence"
+                    value={regFullName}
+                    onChange={e => setRegFullName(e.target.value)}
+                    placeholder={regRole === 'TECHNICIAN' ? "e.g. Ramesh Kumar (Plumbing Lead)" : "e.g. Ramesh Kumar"}
+                    required
                     autoComplete="off"
                     style={{ padding: '0.45rem 0.65rem', fontSize: '0.84rem' }}
                   />
                 </div>
 
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label" style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Phone</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                    <label className="form-label" style={{ fontSize: '0.8rem', marginBottom: 0 }}>
+                      {regRole === 'TECHNICIAN' ? 'Official / Dispatch Email *' : 'University Email (@anurag.edu.in) *'}
+                    </label>
+                    {['STUDENT', 'FACULTY'].includes(regRole) && (
+                      <span style={{ fontSize: '0.7rem', color: 'var(--color-primary)', fontWeight: 600 }}>@anurag.edu.in required</span>
+                    )}
+                  </div>
                   <input
-                    type="tel"
+                    type="email"
                     className="form-input"
-                    value={regPhone}
-                    onChange={e => setRegPhone(e.target.value)}
-                    placeholder="+91..."
+                    value={regEmail}
+                    onChange={e => setRegEmail(e.target.value)}
+                    placeholder={regRole === 'TECHNICIAN' ? "specialist@anurag.edu.in or vendor email" : "rollno@anurag.edu.in"}
+                    required
                     autoComplete="off"
                     style={{ padding: '0.45rem 0.65rem', fontSize: '0.84rem' }}
                   />
                 </div>
-              </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label" style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>
+                      {regRole === 'TECHNICIAN' ? 'Department / Unit' : 'Department'}
+                    </label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={regDepartment}
+                      onChange={e => setRegDepartment(e.target.value)}
+                      placeholder={regRole === 'TECHNICIAN' ? "Campus Facilities" : "e.g. Artificial Intelligence"}
+                      autoComplete="off"
+                      style={{ padding: '0.45rem 0.65rem', fontSize: '0.84rem' }}
+                    />
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label" style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Contact Phone</label>
+                    <input
+                      type="tel"
+                      className="form-input"
+                      value={regPhone}
+                      onChange={e => setRegPhone(e.target.value)}
+                      placeholder="+91..."
+                      autoComplete="off"
+                      style={{ padding: '0.45rem 0.65rem', fontSize: '0.84rem' }}
+                    />
+                  </div>
+                </div>
 
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label" style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Password</label>
