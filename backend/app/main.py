@@ -160,9 +160,14 @@ def get_contact_info():
 def submit_contact_inquiry(payload: ContactMessageIn, db: Session = Depends(get_db)):
     """
     Accepts campus contact desk inquiries, logs them into the operations queue,
-    and provides mailto delivery metadata for direct email dispatch.
+    attempts direct background email transmission to .env inboxes,
+    and provides verified mailto delivery links.
     """
     import urllib.parse
+    import smtplib
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+
     clean_name = (payload.name or "Campus User").strip()
     clean_email = payload.email.strip().lower()
     clean_subject = (payload.subject or "Campus Operations Inquiry").strip()
@@ -181,13 +186,52 @@ def submit_contact_inquiry(payload: ContactMessageIn, db: Session = Depends(get_
     db.commit()
     db.refresh(inc)
 
+    # Attempt direct SMTP dispatch if SMTP is configured in environment
+    smtp_sent = False
+    smtp_host = os.getenv("SMTP_HOST")
+    smtp_port = int(os.getenv("SMTP_PORT") or 587)
+    smtp_user = os.getenv("SMTP_USER")
+    smtp_pass = os.getenv("SMTP_PASSWORD")
+    sender_email = os.getenv("EMAIL_SENDER") or smtp_user or "noreply@auorbit.anurag.edu.in"
+
+    if smtp_host and smtp_user and smtp_pass:
+        try:
+            msg = MIMEMultipart()
+            msg["From"] = f"AUOrbit Contact Desk <{sender_email}>"
+            msg["To"] = CONTACT_EMAIL_PRIMARY
+            msg["Cc"] = CONTACT_EMAIL_SECONDARY
+            msg["Reply-To"] = clean_email
+            msg["Subject"] = f"[AUOrbit Helpdesk #{inc.id}] {clean_subject}"
+            
+            body_text = (
+                f"Official Campus Operations Desk Inquiry (Ticket #{inc.id})\n"
+                f"===========================================================\n\n"
+                f"From: {clean_name} <{clean_email}>\n"
+                f"Subject: {clean_subject}\n"
+                f"Submitted: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}\n\n"
+                f"Message Content:\n"
+                f"{clean_msg}\n\n"
+                f"===========================================================\n"
+                f"Delivered directly to: {CONTACT_EMAIL_PRIMARY}, {CONTACT_EMAIL_SECONDARY}\n"
+            )
+            msg.attach(MIMEText(body_text, "plain"))
+
+            with smtplib.SMTP(smtp_host, smtp_port, timeout=8) as server:
+                server.starttls()
+                server.login(smtp_user, smtp_pass)
+                server.sendmail(sender_email, [CONTACT_EMAIL_PRIMARY, CONTACT_EMAIL_SECONDARY], msg.as_string())
+            smtp_sent = True
+        except Exception as e:
+            print(f"[Contact Email Dispatch Notice]: {e}")
+
     # Pre-generate direct mailto URL targeting primary & secondary operations inboxes
     recipients = f"{CONTACT_EMAIL_PRIMARY}?cc={urllib.parse.quote(CONTACT_EMAIL_SECONDARY)}"
-    mailto_link = f"mailto:{recipients}&subject={urllib.parse.quote(clean_subject)}&body={urllib.parse.quote(f'From: {clean_name} ({clean_email})\n\nOfficial Inquiry:\n{clean_msg}')}"
+    mailto_link = f"mailto:{recipients}&subject={urllib.parse.quote(f'[{clean_subject}] Inquiry from {clean_name}')}&body={urllib.parse.quote(f'From: {clean_name} ({clean_email})\n\nOfficial Inquiry:\n{clean_msg}')}"
 
     return {
         'status': 'success',
         'ticket_id': inc.id,
+        'smtp_dispatched': smtp_sent,
         'recipient_email': CONTACT_EMAIL_PRIMARY,
         'recipient_email_primary': CONTACT_EMAIL_PRIMARY,
         'recipient_email_secondary': CONTACT_EMAIL_SECONDARY,

@@ -16,8 +16,10 @@ for p in env_paths:
 
 GROQ_API_KEY = (os.getenv("GROQ_API_KEY") or "").strip()
 GEMINI_API_KEY = (os.getenv("GEMINI_API_KEY") or "").strip()
-AI_PROVIDER = os.getenv("AI_PROVIDER", "groq" if GROQ_API_KEY else "groq").lower().strip()
-AI_MODEL = os.getenv("AI_MODEL", "llama-3.3-70b-versatile" if AI_PROVIDER == "groq" else "gemini-2.0-flash").strip()
+DEEPSEEK_API_KEY = (os.getenv("DEEPSEEK_API_KEY") or "").strip()
+DEEPSEEK_BASE_URL = (os.getenv("DEEPSEEK_BASE_URL") or "https://api.deepseek.com").strip()
+AI_PROVIDER = os.getenv("AI_PROVIDER", "groq" if GROQ_API_KEY else ("deepseek" if DEEPSEEK_API_KEY else "gemini")).lower().strip()
+AI_MODEL = os.getenv("AI_MODEL", "openai/gpt-oss-120b" if AI_PROVIDER == "groq" else ("deepseek-chat" if AI_PROVIDER == "deepseek" else "gemini-2.0-flash")).strip()
 DATABASE_URL = (os.getenv("DATABASE_URL") or "sqlite:///./auorbit.db").strip()
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)

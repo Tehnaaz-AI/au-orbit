@@ -204,26 +204,26 @@ def seed(db):
         db.add_all(new_equip)
         db.flush()
 
-    # 4. Seed Canonical Specialist (Strictly 1 Technician: Arjun Rao)
-    arjun = db.query(Technician).filter(Technician.organization_id == 1, Technician.name == 'Arjun Rao').first()
-    if not arjun:
-        arjun = Technician(organization_id=1, name='Arjun Rao', specialty='AV_ELECTRICAL', phone='9876543210')
-        db.add(arjun)
-        db.flush()
-
-    # Reassign any old work orders referencing other technicians to Arjun Rao
-    db.query(WorkOrder).filter(WorkOrder.technician_id != arjun.id).update({WorkOrder.technician_id: arjun.id}, synchronize_session=False)
-    db.flush()
-
-    # Remove unlinked legacy technicians
-    legacy_techs = db.query(Technician).filter(
-        Technician.organization_id == 1,
-        Technician.id != arjun.id,
-        Technician.user_id.is_(None)
-    ).all()
-    for lt in legacy_techs:
-        db.delete(lt)
-    db.flush()
+    # 4. Seed Canonical Specialists across all functional domains
+    canonical_techs = [
+        {"name": "Arjun Rao", "specialty": "AV_ELECTRICAL", "phone": "9876543210"},
+        {"name": "Ramesh Verma", "specialty": "FACILITIES", "phone": "9876543211"},
+        {"name": "Karthik S.", "specialty": "IT_NETWORK", "phone": "9876543212"},
+        {"name": "Suresh N.", "specialty": "FACILITIES", "phone": "9876543213"},
+        {"name": "Mahesh G.", "specialty": "FACILITIES", "phone": "9876543214"}
+    ]
+    tech_obj_map = {}
+    for ct in canonical_techs:
+        t_rec = db.query(Technician).filter(Technician.organization_id == 1, Technician.name == ct["name"]).first()
+        if not t_rec:
+            t_rec = Technician(organization_id=1, name=ct["name"], specialty=ct["specialty"], phone=ct["phone"], status='AVAILABLE')
+            db.add(t_rec)
+            db.flush()
+        else:
+            t_rec.specialty = ct["specialty"]
+            t_rec.phone = ct["phone"]
+            t_rec.status = 'AVAILABLE'
+        tech_obj_map[ct["name"]] = t_rec
 
     # 5. Seed Reference Timetable (Department of AI, B.Tech II-I, AY 2026-27, Regulation R24, Effective 29 June 2026)
     existing_tt_keys = {
@@ -340,11 +340,15 @@ def seed(db):
     if new_tt_entries:
         db.add_all(new_tt_entries)
 
-    # 6. Seed Standard Reference University Users (Strictly 1 Person Per Role)
+    # 6. Seed Standard Reference University Users (All Roles & Specialist Profiles)
     canonical_users = [
         {"email": "student@anurag.edu.in", "full_name": "Rahul Sharma (Student)", "role": "STUDENT", "department": "Department of AI", "specialty": None},
         {"email": "faculty@anurag.edu.in", "full_name": "Dr. Ananya S. (Faculty)", "role": "FACULTY", "department": "Department of AI", "specialty": None},
-        {"email": "technician@anurag.edu.in", "full_name": "Arjun Rao (Technician)", "role": "TECHNICIAN", "department": "Campus Facilities", "specialty": "AV_ELECTRICAL", "tech_name": "Arjun Rao"},
+        {"email": "technician@anurag.edu.in", "full_name": "Arjun Rao (Electrical & AV)", "role": "TECHNICIAN", "department": "Campus Facilities", "specialty": "AV_ELECTRICAL", "tech_name": "Arjun Rao"},
+        {"email": "plumber@anurag.edu.in", "full_name": "Ramesh Verma (Plumber)", "role": "TECHNICIAN", "department": "Sanitation & Water Works", "specialty": "FACILITIES", "tech_name": "Ramesh Verma"},
+        {"email": "it.support@anurag.edu.in", "full_name": "Karthik S. (IT & Network)", "role": "TECHNICIAN", "department": "IT & Network Services", "specialty": "IT_NETWORK", "tech_name": "Karthik S."},
+        {"email": "hvac.tech@anurag.edu.in", "full_name": "Suresh N. (HVAC & AC)", "role": "TECHNICIAN", "department": "HVAC & Climate Control", "specialty": "FACILITIES", "tech_name": "Suresh N."},
+        {"email": "carpenter@anurag.edu.in", "full_name": "Mahesh G. (Carpentry)", "role": "TECHNICIAN", "department": "Furniture & Civil Maintenance", "specialty": "FACILITIES", "tech_name": "Mahesh G."},
         {"email": "operations.head@anurag.edu.in", "full_name": "Vikram Reddy (Operations Head)", "role": "OPERATIONAL_HEAD", "department": "Campus Operations", "specialty": "FACILITIES_FLEET"},
         {"email": "admin@anurag.edu.in", "full_name": "Campus Operations Admin", "role": "ADMIN", "department": "University Administration", "specialty": None},
         {"email": "superadmin@anurag.edu.in", "full_name": "Platform Super Admin", "role": "SUPER_ADMIN", "department": "IT & Governance", "specialty": None},

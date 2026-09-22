@@ -27,7 +27,7 @@ from .schemas import (
     SpaceCandidate,
     SpaceAllocationDecision
 )
-from .config import GROQ_API_KEY, GEMINI_API_KEY, AI_PROVIDER, AI_MODEL
+from .config import GROQ_API_KEY, GEMINI_API_KEY, DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, AI_PROVIDER, AI_MODEL
 from .tools import (
     lookup_room_tool,
     find_room_tool,
@@ -170,36 +170,46 @@ class UnderstandingAgent:
     @classmethod
     def run(cls, db: Session, text: str, supplied_room: Optional[str] = None) -> StructuredUnderstanding:
         # 1. Attempt Groq structured understanding if configured
-        if GROQ_API_KEY and (AI_PROVIDER == "groq" or not GEMINI_API_KEY):
+        if GROQ_API_KEY and (AI_PROVIDER == "groq" or not (GEMINI_API_KEY or DEEPSEEK_API_KEY)):
             try:
                 groq_res = cls._call_groq(text, supplied_room)
                 if groq_res:
                     return groq_res
-            except Exception as ex:
-                # Fall through on Groq error
+            except Exception:
                 pass
 
-        # 2. Attempt Gemini structured understanding if configured
+        # 2. Attempt DeepSeek structured understanding if configured
+        if DEEPSEEK_API_KEY or AI_PROVIDER == "deepseek":
+            try:
+                deepseek_res = cls._call_deepseek(text, supplied_room)
+                if deepseek_res:
+                    return deepseek_res
+            except Exception:
+                pass
+
+        # 3. Attempt Gemini structured understanding if configured
         if GEMINI_API_KEY and AI_PROVIDER == "gemini":
             try:
                 gemini_res = cls._call_gemini(text, supplied_room)
                 if gemini_res:
                     return gemini_res
-            except Exception as ex:
-                # Fall through to deterministic fallback on any model/network error
+            except Exception:
                 pass
 
-        # 3. Resilient deterministic rule-based fallback
+        # 4. Resilient deterministic rule-based fallback
         return cls._deterministic_fallback(text, supplied_room, db)
 
     @classmethod
-    def _call_groq(cls, text: str, supplied_room: Optional[str] = None) -> Optional[StructuredUnderstanding]:
-        from groq import Groq
-        client = Groq(api_key=GROQ_API_KEY)
+    def _call_deepseek(cls, text: str, supplied_room: Optional[str] = None) -> Optional[StructuredUnderstanding]:
+        from openai import OpenAI
+        client = OpenAI(
+            api_key=DEEPSEEK_API_KEY or "free-tier",
+            base_url=DEEPSEEK_BASE_URL
+        )
 
         system_instruction = (
             "You are the Understanding Agent for AUOrbit, an autonomous university operations platform. "
-            "Interpret natural-language problem reports from students and faculty. "
+            "Analyze and interpret natural-language operational and classroom requests from students and faculty. "
             "Return JSON matching this exact schema: {\n"
             '  "problem_type": string,\n'
             '  "category": "AV_ELECTRICAL" | "IT_NETWORK" | "FACILITIES" | "SPACE_ALLOCATION",\n'
@@ -213,23 +223,27 @@ class UnderstandingAgent:
             '  "confidence": float (0.0 to 1.0),\n'
             '  "reasoning_summary": string\n'
             "}\n"
-            "CRITICAL OPERATIONAL RULES:\n"
-            "1. NEVER invent or hallucinate a campus room code. "
-            "2. If a specific room code (e.g. B-204, I-302, APJ-HALL, SPORTS-COMPLEX, D-CANTEEN) is mentioned, set 'location'. "
-            "3. If the location is vague or not mentioned, set 'location' to null and 'is_location_ambiguous' to true. "
-            "4. Map category to: 'SPACE_ALLOCATION' if the issue is a venue capacity/fullness issue (venue is full, classroom occupied, double booked, students standing, no seats, chairs shortage), timetable mismatch/clash, room collision, lack of space, room needed for class/activity, or classroom relocation; otherwise AV_ELECTRICAL, IT_NETWORK, FACILITIES. "
-            "5. Map resolution_type to: 'SPACE_REALLOCATION' for ANY venue capacity/fullness issue, timetable mismatch/clash, double booking, seating shortage, overcrowding, lack of seats/space, or classroom relocation; otherwise 'TECHNICIAN_DISPATCH'. "
-            "6. If resolution_type is 'SPACE_REALLOCATION', set requires_technician to false and category to 'SPACE_ALLOCATION'. Technicians should ONLY be dispatched for physical maintenance, hardware defects, electrical faults, leaks, or broken fixtures. Pure venue, timetable, and space allocation issues are handled autonomously by the Space Allocation Agent with zero human technician dispatch. "
-            "7. Map urgency_signal to: EMERGENCY, HIGH, NORMAL, LOW. "
-            "8. Respond ONLY with valid JSON."
+            "CRITICAL DYNAMIC CONTEXT RULES:\n"
+            "1. SPACE & CLASSROOM REALLOCATION vs PHYSICAL TECHNICIAN:\n"
+            "   - If the request is about classroom capacity, room being too small, insufficient space for students, overcrowding, needing a different/larger room, class relocation, timetable collision, double-booking, or venue scheduling:\n"
+            "     * Set category = 'SPACE_ALLOCATION'\n"
+            "     * Set resolution_type = 'SPACE_REALLOCATION'\n"
+            "     * Set requires_technician = false\n"
+            "   - If the issue is physical equipment breakdown, hardware defect, electrical fault, lighting, plumbing leak, AC repair, or network outage:\n"
+            "     * Set category = 'AV_ELECTRICAL' | 'IT_NETWORK' | 'FACILITIES'\n"
+            "     * Set resolution_type = 'TECHNICIAN_DISPATCH'\n"
+            "     * Set requires_technician = true\n"
+            "2. LOCATION EXTRACTION: Extract room codes (e.g. I-302, B-204, APJ-HALL) into 'location'.\n"
+            "3. Respond ONLY with valid JSON."
         )
 
         user_content = f"User Report: {text}"
         if supplied_room:
             user_content += f"\nSupplied Location Hint: {supplied_room}"
 
+        model_name = AI_MODEL if "deepseek" in AI_MODEL else "deepseek-chat"
         completion = client.chat.completions.create(
-            model=AI_MODEL if ("llama" in AI_MODEL or "mixtral" in AI_MODEL) else "llama-3.3-70b-versatile",
+            model=model_name,
             messages=[
                 {"role": "system", "content": system_instruction},
                 {"role": "user", "content": user_content}
@@ -238,15 +252,103 @@ class UnderstandingAgent:
             response_format={"type": "json_object"}
         )
 
-        content = completion.choices[0].message.content
+        content = completion.choices[0].message.content if completion.choices else None
         if not content:
             return None
 
         parsed = json.loads(content)
+        parsed["description"] = parsed.get("description") or text.strip()
+        parsed["source"] = "deepseek"
+
+        if parsed.get("category") not in VALID_CATEGORIES:
+            parsed["category"] = "SPACE_ALLOCATION" if parsed.get("resolution_type") == "SPACE_REALLOCATION" else "FACILITIES"
+
+        loc = parsed.get("location")
+        if loc and loc.strip().lower() in ("null", "none", "", "unspecified", "unknown"):
+            parsed["location"] = None
+            parsed["is_location_ambiguous"] = True
+        elif loc:
+            parsed["location"] = loc.strip().upper().replace(" ", "-")
+
+        if parsed.get("resolution_type") == "SPACE_REALLOCATION":
+            parsed["requires_technician"] = False
+            parsed["category"] = "SPACE_ALLOCATION"
+
+        return StructuredUnderstanding(**parsed)
+
+    @classmethod
+    def _call_groq(cls, text: str, supplied_room: Optional[str] = None) -> Optional[StructuredUnderstanding]:
+        from groq import Groq
+        client = Groq(api_key=GROQ_API_KEY)
+
+        system_instruction = (
+            "You are the Understanding Agent for AUOrbit, an autonomous university operations platform. "
+            "Analyze and interpret natural-language operational and classroom requests from students and faculty. "
+            "Return JSON matching this exact schema: {\n"
+            '  "problem_type": string,\n'
+            '  "category": "AV_ELECTRICAL" | "IT_NETWORK" | "FACILITIES" | "SPACE_ALLOCATION",\n'
+            '  "location": string | null,\n'
+            '  "is_location_ambiguous": boolean,\n'
+            '  "urgency_signal": "EMERGENCY" | "HIGH" | "NORMAL" | "LOW",\n'
+            '  "resolution_type": "SPACE_REALLOCATION" | "TECHNICIAN_DISPATCH",\n'
+            '  "requires_technician": boolean,\n'
+            '  "seating_requirement": number | null,\n'
+            '  "affected_activity": string | null,\n'
+            '  "confidence": float (0.0 to 1.0),\n'
+            '  "reasoning_summary": string\n'
+            "}\n"
+            "CRITICAL DYNAMIC CONTEXT RULES:\n"
+            "1. SPACE & CLASSROOM REALLOCATION vs PHYSICAL TECHNICIAN:\n"
+            "   - If the request is about classroom capacity, room being too small, insufficient space for students, overcrowding, needing a different/larger room, class relocation, timetable collision, double-booking, or venue scheduling:\n"
+            "     * Set category = 'SPACE_ALLOCATION'\n"
+            "     * Set resolution_type = 'SPACE_REALLOCATION'\n"
+            "     * Set requires_technician = false\n"
+            "     * NEVER dispatch a technician for classroom/space capacity allocation.\n"
+            "   - If the issue is physical equipment breakdown, hardware defect, electrical fault, lighting, plumbing leak, AC repair, or network outage:\n"
+            "     * Set category = 'AV_ELECTRICAL' | 'IT_NETWORK' | 'FACILITIES'\n"
+            "     * Set resolution_type = 'TECHNICIAN_DISPATCH'\n"
+            "     * Set requires_technician = true\n"
+            "2. LOCATION EXTRACTION:\n"
+            "   - Extract room codes (e.g. I-302, B-204, APJ-HALL, SPORTS-COMPLEX) into 'location'.\n"
+            "   - If vague or missing, set location = null and is_location_ambiguous = true.\n"
+            "3. Respond ONLY with valid JSON."
+        )
+
+        user_content = f"User Report: {text}"
+        if supplied_room:
+            user_content += f"\nSupplied Location Hint: {supplied_room}"
+
+        candidate_models = [AI_MODEL, "openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b"]
+        seen_models = set()
+        models_to_try = [m for m in candidate_models if m and not (m in seen_models or seen_models.add(m))]
+
+        content = None
+        for model_name in models_to_try:
+            try:
+                completion = client.chat.completions.create(
+                    model=model_name,
+                    messages=[
+                        {"role": "system", "content": system_instruction},
+                        {"role": "user", "content": user_content}
+                    ],
+                    temperature=0.1,
+                    response_format={"type": "json_object"}
+                )
+                if completion.choices and completion.choices[0].message.content:
+                    content = completion.choices[0].message.content
+                    break
+            except Exception:
+                continue
+
+        if not content:
+            return None
+
+        parsed = json.loads(content)
+        parsed["description"] = parsed.get("description") or text.strip()
         parsed["source"] = "groq"
 
         if parsed.get("category") not in VALID_CATEGORIES:
-            parsed["category"] = "FACILITIES"
+            parsed["category"] = "SPACE_ALLOCATION" if parsed.get("resolution_type") == "SPACE_REALLOCATION" else "FACILITIES"
 
         loc = parsed.get("location")
         if loc and loc.strip().lower() in ("null", "none", "", "unspecified", "unknown"):
@@ -367,12 +469,13 @@ class UnderstandingAgent:
 
         low = text.lower()
         
-        # 1. Check for Seating / Venue Full / Space Allocation / Timetable Mismatch / Room Relocation
+        # 1. Check for Seating / Venue Full / Space Allocation / Timetable Mismatch / Room Relocation / Insufficient Space
         space_patterns = [
             'seating', 'seat', 'seats', 'bench', 'benches', 'capacity', 'overflow', 'overflowing',
             'overcrowded', 'overcrowding', 'relocate', 'relocation', 'shift class', 'shift classroom',
             'switch room', 'switch classroom', 'empty room', 'vacant room', 'not enough room',
-            'insufficient seating', 'no space for students', 'additional classroom', 'extra room',
+            'insufficient seating', 'insufficient space', 'insufficient room', 'insufficient',
+            'not sufficient', 'not enough space', 'no space for students', 'additional classroom', 'extra room',
             'class relocation', 'venue full', 'venue is full', 'room full', 'room is full', 'hall full',
             'hall is full', 'lab full', 'lab is full', 'occupied', 'already occupied', 'room occupied',
             'double booked', 'double booking', 'double-booked', 'double-booking', 'timetable mismatch',
@@ -380,9 +483,13 @@ class UnderstandingAgent:
             'two classes in same room', 'room collision', 'lecture clash', 'need venue', 'need classroom',
             'need room', 'need lab', 'venue required', 'classroom needed', 'room required', 'space needed',
             'students standing', 'standing in class', 'no seats available', 'no chairs', 'chairs shortage',
-            'space shortage', 'assign venue', 'assign classroom', 'allocate venue', 'allocate classroom'
+            'space shortage', 'assign venue', 'assign classroom', 'allocate venue', 'allocate classroom',
+            'allocate some other room', 'allocate another room', 'allocate other room', 'allocate room',
+            'allocate class', 'allocate some other', 'allocate another', 'change room', 'change classroom',
+            'move class', 'move classroom', 'room too small', 'class too small', 'classroom too small',
+            'larger room', 'bigger room', 'reallocate'
         ]
-        is_space_issue = any(re.search(r'\b' + re.escape(w) + r'\b', low) for w in space_patterns)
+        is_space_issue = any(re.search(r'\b' + re.escape(w) + r'\b', low) for w in space_patterns) or ('not sufficient' in low) or ('allocate' in low and ('room' in low or 'class' in low))
 
         if is_space_issue:
             if any(k in low for k in ['timetable mismatch', 'timetable clash', 'schedule mismatch', 'schedule clash', 'slot clash', 'class collision', 'double booked', 'double booking', 'double-booked']):
@@ -391,6 +498,8 @@ class UnderstandingAgent:
                 problem_type = 'Venue Full / Occupied'
             elif any(k in low for k in ['need venue', 'need classroom', 'need room', 'need lab', 'venue required', 'classroom needed', 'room required', 'space needed', 'assign venue', 'assign classroom']):
                 problem_type = 'Venue Required'
+            elif any(k in low for k in ['relocate', 'relocation', 'shift class', 'shift classroom', 'switch room', 'switch classroom', 'allocate some other room', 'allocate another room', 'change room', 'move class']):
+                problem_type = 'Class Relocation'
             else:
                 problem_type = 'Seating Shortage'
             category = 'SPACE_ALLOCATION'
@@ -918,6 +1027,18 @@ class ResourceAgent:
         'General': 'FACILITIES'
     }
 
+    DOMAIN_EXPERT_MAPPING = {
+        'Water Supply / Plumbing': 'Ramesh Verma',
+        'AC / HVAC': 'Suresh N.',
+        'Furniture': 'Mahesh G.',
+        'Chalk Board': 'Mahesh G.',
+        'Projector': 'Arjun Rao',
+        'Sound System / Mic': 'Arjun Rao',
+        'Lighting': 'Arjun Rao',
+        'Wi-Fi AP': 'Karthik S.',
+        'Workstations': 'Karthik S.'
+    }
+
     @classmethod
     def get_capability_requirement(cls, problem_type: str, category: str) -> str:
         if problem_type in cls.CAPABILITY_MAPPING:
@@ -972,6 +1093,10 @@ class ResourceAgent:
                 cap_score = 0.0
                 cap_match = "MISMATCH"
 
+            # Domain specialist bonus (+10 if name matches designated expert)
+            is_domain_expert = (cls.DOMAIN_EXPERT_MAPPING.get(understanding.problem_type) == t.name)
+            domain_bonus = 10.0 if is_domain_expert else 0.0
+
             # 2. Availability Score (0 to 20)
             avail_score = 20.0 if is_available else 0.0
 
@@ -986,12 +1111,11 @@ class ResourceAgent:
                 workload_score = 0.0
 
             # 4. Proximity / Location Match Score (0 to 10)
-            # Stage 4B.1: Neutral scoring since base block is not modeled on technician directory
             loc_match = False
             loc_score = 5.0
 
             # Calculate total score
-            total_score = cap_score + avail_score + workload_score + loc_score
+            total_score = cap_score + domain_bonus + avail_score + workload_score + loc_score
 
             reasons = []
             if cap_score > 0:
