@@ -174,6 +174,44 @@ export function App() {
       setActiveTab(tab);
     };
 
+    if (showAuthScreen) {
+      return (
+        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-page)', position: 'relative' }}>
+          <OrbitBackground />
+          <Navbar
+            currentUser={null}
+            onSelectTab={handlePublicNavigate}
+            onSignIn={() => openAuth('LOGIN')}
+            onGetStarted={() => openAuth('REGISTER')}
+          />
+
+          {toast && (
+            <div className="toast-bar" style={{ borderColor: toast.type === 'error' ? 'var(--status-danger-border)' : 'var(--primary-dark)' }}>
+              {toast.type === 'error' ? <AlertCircle size={15} color="var(--status-danger)" /> : <CheckCircle size={15} color="var(--status-success)" />}
+              <span style={{ fontSize: '0.84rem' }}>{toast.message}</span>
+              <button className="btn-ghost btn-sm" onClick={() => setToast(null)} style={{ padding: 2, color: '#fff' }}><X size={13} /></button>
+            </div>
+          )}
+
+          <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1.25rem', position: 'relative', zIndex: 1 }}>
+            <LoginScreen
+              onLoginSuccess={handleLoginSuccess}
+              initialMode={authMode}
+              onError={showError}
+              onSuccess={showSuccess}
+              onBackToLanding={() => setShowAuthScreen(false)}
+            />
+          </main>
+
+          <Footer
+            onNavigate={handlePublicNavigate}
+            onSignIn={() => openAuth('LOGIN')}
+            onGetStarted={() => openAuth('REGISTER')}
+          />
+        </div>
+      );
+    }
+
     if (activeTab === 'about') {
       return (
         <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-page)' }}>
@@ -212,44 +250,6 @@ export function App() {
               onNavigateToLogin={() => openAuth('LOGIN')} 
             />
           </main>
-          <Footer
-            onNavigate={handlePublicNavigate}
-            onSignIn={() => openAuth('LOGIN')}
-            onGetStarted={() => openAuth('REGISTER')}
-          />
-        </div>
-      );
-    }
-
-    if (showAuthScreen) {
-      return (
-        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-page)', position: 'relative' }}>
-          <OrbitBackground />
-          <Navbar
-            currentUser={null}
-            onSelectTab={handlePublicNavigate}
-            onSignIn={() => openAuth('LOGIN')}
-            onGetStarted={() => openAuth('REGISTER')}
-          />
-
-          {toast && (
-            <div className="toast-bar" style={{ borderColor: toast.type === 'error' ? 'var(--status-danger-border)' : 'var(--primary-dark)' }}>
-              {toast.type === 'error' ? <AlertCircle size={15} color="var(--status-danger)" /> : <CheckCircle size={15} color="var(--status-success)" />}
-              <span style={{ fontSize: '0.84rem' }}>{toast.message}</span>
-              <button className="btn-ghost btn-sm" onClick={() => setToast(null)} style={{ padding: 2, color: '#fff' }}><X size={13} /></button>
-            </div>
-          )}
-
-          <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1.25rem', position: 'relative', zIndex: 1 }}>
-            <LoginScreen
-              onLoginSuccess={handleLoginSuccess}
-              initialMode={authMode}
-              onError={showError}
-              onSuccess={showSuccess}
-              onBackToLanding={() => setShowAuthScreen(false)}
-            />
-          </main>
-
           <Footer
             onNavigate={handlePublicNavigate}
             onSignIn={() => openAuth('LOGIN')}

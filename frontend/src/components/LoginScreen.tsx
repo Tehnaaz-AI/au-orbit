@@ -19,7 +19,11 @@ import {
   Sparkles,
   ShieldCheck,
   RefreshCw,
-  Building2
+  Building2,
+  Droplets,
+  Wifi,
+  Flame,
+  Hammer
 } from 'lucide-react';
 
 interface LoginScreenProps {
@@ -49,11 +53,43 @@ const DEMO_PRESETS = [
   },
   {
     role: 'TECHNICIAN',
-    label: 'Technician',
+    label: 'AV Tech',
     email: 'technician@anurag.edu.in',
     password: 'password123',
     icon: <Wrench size={12} />,
     color: '#D97706'
+  },
+  {
+    role: 'TECHNICIAN',
+    label: 'Plumber',
+    email: 'plumber@anurag.edu.in',
+    password: 'password123',
+    icon: <Droplets size={12} />,
+    color: '#0284C7'
+  },
+  {
+    role: 'TECHNICIAN',
+    label: 'IT & Wi-Fi',
+    email: 'it.support@anurag.edu.in',
+    password: 'password123',
+    icon: <Wifi size={12} />,
+    color: '#0D9488'
+  },
+  {
+    role: 'TECHNICIAN',
+    label: 'HVAC Tech',
+    email: 'hvac.tech@anurag.edu.in',
+    password: 'password123',
+    icon: <Flame size={12} />,
+    color: '#EA580C'
+  },
+  {
+    role: 'TECHNICIAN',
+    label: 'Carpenter',
+    email: 'carpenter@anurag.edu.in',
+    password: 'password123',
+    icon: <Hammer size={12} />,
+    color: '#78350F'
   },
   {
     role: 'OPERATIONAL_HEAD',
@@ -399,7 +435,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
                   {DEMO_PRESETS.map(p => (
                     <button
-                      key={p.role}
+                      key={p.email}
                       type="button"
                       disabled={loading}
                       onClick={() => handleQuickLogin(p.email, p.password)}
