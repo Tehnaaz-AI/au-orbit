@@ -19,6 +19,7 @@ from .agents import (
     PriorityAgent,
     ResourceAgent,
     SchedulingAgent,
+    SpaceAllocationAgent,
     VerificationAgent,
     log_agent_event,
     calculate_datetime_from_slot,
@@ -407,101 +408,134 @@ def orchestrate(
         status='SUCCESS'
     )
 
-    # 4. RESOURCE AGENT & SCHEDULING AGENT
-    resource_decision = ResourceAgent.run(db, incident, understanding, context_facts)
-    
-    if resource_decision.is_feasible and resource_decision.selected_technician_id:
-        tech = db.get(Technician, resource_decision.selected_technician_id)
-        scheduling_decision = SchedulingAgent.run(db, incident, priority_assessment, context_facts, resource_decision, understanding)
+    # 4. RESOLUTION STRATEGY EXECUTION
+    # Path A: Space Reallocation (Seating shortage, overcrowding, classroom relocation) -> No technician dispatched
+    if understanding.resolution_type == 'SPACE_REALLOCATION' or not understanding.requires_technician:
+        space_decision = SpaceAllocationAgent.run(db, incident, understanding, context_facts)
         
-        scheduled_for_dt = calculate_datetime_from_slot(
-            scheduling_decision.target_date,
-            scheduling_decision.scheduled_start
-        ) if scheduling_decision.scheduled else None
+        if space_decision.reallocated and space_decision.allocated_room:
+            incident.status = 'RESOLVED'
+            incident.resolution = space_decision.decision_reason
+            
+            log_agent_event(
+                db=db,
+                incident_id=incident.id,
+                agent='Resolution Agent',
+                action=f"Autonomous Space Resolution: Reallocated class to vacant room {space_decision.allocated_room}. Incident marked RESOLVED with zero technician dispatch.",
+                tool='reallocate_classroom',
+                detail=space_decision.model_dump(),
+                status='SUCCESS'
+            )
+        else:
+            incident.status = 'TRIAGED'
+            incident.resolution = space_decision.decision_reason
+            
+            log_agent_event(
+                db=db,
+                incident_id=incident.id,
+                agent='Resolution Agent',
+                action="Space reallocation pending manual coordinator review (no immediate vacant room identified).",
+                tool='reallocate_classroom',
+                detail=space_decision.model_dump(),
+                status='WAITING'
+            )
 
-        log_agent_event(
-            db=db,
-            incident_id=incident.id,
-            agent='Resource Agent',
-            action=f'Selected qualified specialist {tech.name} (Score: {resource_decision.score:.1f}/100)',
-            tool='find_available_technicians_tool',
-            detail=resource_decision.model_dump(),
-            status='SUCCESS'
-        )
-        
-        sched_detail = scheduling_decision.model_dump()
-        sched_detail['scheduled_for'] = scheduled_for_dt.isoformat() if scheduled_for_dt else None
-
-        log_agent_event(
-            db=db,
-            incident_id=incident.id,
-            agent='Scheduling Agent',
-            action=f"Scheduled execution slot: {scheduling_decision.scheduled_start} - {scheduling_decision.scheduled_end} ({scheduling_decision.policy_applied})",
-            tool='schedule_work_order',
-            detail=sched_detail,
-            status='SUCCESS' if scheduling_decision.scheduled else 'CONFLICT'
-        )
-        
-        work = SchedulingAgent.create_work_order(
-            db=db,
-            incident_id=incident.id,
-            technician=tech,
-            scheduled_for=scheduled_for_dt,
-            notes=f'Auto-assigned to {tech.name}; Slot: {scheduling_decision.scheduled_start} - {scheduling_decision.scheduled_end} ({scheduling_decision.policy_applied})'
-        )
-        transition_incident(
-            db=db,
-            incident=incident,
-            new_status='ASSIGNED',
-            actor='Resolution Agent',
-            reason=f'Auto-assigned to {tech.name}'
-        )
-        log_agent_event(
-            db=db,
-            incident_id=incident.id,
-            agent='Resolution Agent',
-            action=f'Created and assigned work order #{work.id} to {tech.name}',
-            tool='create_work_order',
-            detail={'work_order_id': work.id, 'technician': tech.name, 'status': 'ASSIGNED', 'scheduled_for': scheduled_for_dt.isoformat() if scheduled_for_dt else None},
-            status='SUCCESS'
-        )
+    # Path B: Hardware / Electrical / Physical Maintenance -> Dispatch Technician with Work Order
     else:
-        scheduling_decision = SchedulingAgent.run(db, incident, priority_assessment, context_facts, resource_decision, understanding)
+        resource_decision = ResourceAgent.run(db, incident, understanding, context_facts)
         
-        log_agent_event(
-            db=db,
-            incident_id=incident.id,
-            agent='Resource Agent',
-            action='No qualified technician currently available meeting operational constraints',
-            tool='find_available_technicians_tool',
-            detail=resource_decision.model_dump(),
-            status='NO_FEASIBLE_RESOURCE'
-        )
-        
-        log_agent_event(
-            db=db,
-            incident_id=incident.id,
-            agent='Scheduling Agent',
-            action='Placed in scheduling queue pending resource availability',
-            tool='schedule_work_order',
-            detail=scheduling_decision.model_dump(),
-            status='WAITING'
-        )
-        
-        work = SchedulingAgent.create_work_order(
-            db=db,
-            incident_id=incident.id,
-            technician=None,
-            scheduled_for=None,
-            notes=resource_decision.decision_reason
-        )
-        transition_incident(
-            db=db,
-            incident=incident,
-            new_status='REPLANNING',
-            actor='Scheduling Agent',
-            reason=f'Queued: {resource_decision.decision_reason}'
-        )
+        if resource_decision.is_feasible and resource_decision.selected_technician_id:
+            tech = db.get(Technician, resource_decision.selected_technician_id)
+            scheduling_decision = SchedulingAgent.run(db, incident, priority_assessment, context_facts, resource_decision, understanding)
+            
+            scheduled_for_dt = calculate_datetime_from_slot(
+                scheduling_decision.target_date,
+                scheduling_decision.scheduled_start
+            ) if scheduling_decision.scheduled else None
+
+            log_agent_event(
+                db=db,
+                incident_id=incident.id,
+                agent='Resource Agent',
+                action=f'Selected qualified specialist {tech.name} (Score: {resource_decision.score:.1f}/100)',
+                tool='find_available_technicians_tool',
+                detail=resource_decision.model_dump(),
+                status='SUCCESS'
+            )
+            
+            sched_detail = scheduling_decision.model_dump()
+            sched_detail['scheduled_for'] = scheduled_for_dt.isoformat() if scheduled_for_dt else None
+
+            log_agent_event(
+                db=db,
+                incident_id=incident.id,
+                agent='Scheduling Agent',
+                action=f"Scheduled execution slot: {scheduling_decision.scheduled_start} - {scheduling_decision.scheduled_end} ({scheduling_decision.policy_applied})",
+                tool='schedule_work_order',
+                detail=sched_detail,
+                status='SUCCESS' if scheduling_decision.scheduled else 'CONFLICT'
+            )
+            
+            work = SchedulingAgent.create_work_order(
+                db=db,
+                incident_id=incident.id,
+                technician=tech,
+                scheduled_for=scheduled_for_dt,
+                notes=f'Auto-assigned to {tech.name}; Slot: {scheduling_decision.scheduled_start} - {scheduling_decision.scheduled_end} ({scheduling_decision.policy_applied})'
+            )
+            transition_incident(
+                db=db,
+                incident=incident,
+                new_status='ASSIGNED',
+                actor='Resolution Agent',
+                reason=f'Auto-assigned to {tech.name}'
+            )
+            log_agent_event(
+                db=db,
+                incident_id=incident.id,
+                agent='Resolution Agent',
+                action=f'Created and assigned work order #{work.id} to {tech.name}',
+                tool='create_work_order',
+                detail={'work_order_id': work.id, 'technician': tech.name, 'status': 'ASSIGNED', 'scheduled_for': scheduled_for_dt.isoformat() if scheduled_for_dt else None},
+                status='SUCCESS'
+            )
+        else:
+            scheduling_decision = SchedulingAgent.run(db, incident, priority_assessment, context_facts, resource_decision, understanding)
+            
+            log_agent_event(
+                db=db,
+                incident_id=incident.id,
+                agent='Resource Agent',
+                action='No qualified technician currently available meeting operational constraints',
+                tool='find_available_technicians_tool',
+                detail=resource_decision.model_dump(),
+                status='NO_FEASIBLE_RESOURCE'
+            )
+            
+            log_agent_event(
+                db=db,
+                incident_id=incident.id,
+                agent='Scheduling Agent',
+                action='Placed in scheduling queue pending resource availability',
+                tool='schedule_work_order',
+                detail=scheduling_decision.model_dump(),
+                status='WAITING'
+            )
+            
+            work = SchedulingAgent.create_work_order(
+                db=db,
+                incident_id=incident.id,
+                technician=None,
+                scheduled_for=None,
+                notes=resource_decision.decision_reason
+            )
+            transition_incident(
+                db=db,
+                incident=incident,
+                new_status='REPLANNING',
+                actor='Scheduling Agent',
+                reason=f'Queued: {resource_decision.decision_reason}'
+            )
 
     agent_run.status = 'COMPLETED'
     agent_run.completed_at = datetime.now(timezone.utc)

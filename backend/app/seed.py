@@ -1,4 +1,4 @@
-from .models import Organization, Campus, Building, Department, Room, Equipment, Technician, TimetableEntry, User
+from .models import Organization, Campus, Building, Department, Room, Equipment, Technician, TimetableEntry, User, WorkOrder
 from .auth import hash_password
 
 
@@ -204,21 +204,25 @@ def seed(db):
         db.add_all(new_equip)
         db.flush()
 
-    # 4. Seed Technicians
-    existing_tech_names = {t.name for t in db.query(Technician).filter(Technician.organization_id == 1).all()}
-    default_techs = [
-        Technician(organization_id=1, name='Arjun Rao', specialty='AV_ELECTRICAL', phone='9876543210'),
-        Technician(organization_id=1, name='Kavya Shah', specialty='AV_ELECTRICAL', phone='9876543213'),
-        Technician(organization_id=1, name='Vikram Singh', specialty='AV_ELECTRICAL', phone='9876543215'),
-        Technician(organization_id=1, name='Priya Nair', specialty='IT_NETWORK', phone='9876543211'),
-        Technician(organization_id=1, name='Sneha Patel', specialty='IT_NETWORK', phone='9876543216'),
-        Technician(organization_id=1, name='Mohammed Ali', specialty='FACILITIES', phone='9876543212'),
-        Technician(organization_id=1, name='Ramesh Verma', specialty='FACILITIES', phone='9876543214'),
-        Technician(organization_id=1, name='Anand Kumar', specialty='PLUMBING', phone='9876543217')
-    ]
-    for tech in default_techs:
-        if tech.name not in existing_tech_names:
-            db.add(tech)
+    # 4. Seed Canonical Specialist (Strictly 1 Technician: Arjun Rao)
+    arjun = db.query(Technician).filter(Technician.organization_id == 1, Technician.name == 'Arjun Rao').first()
+    if not arjun:
+        arjun = Technician(organization_id=1, name='Arjun Rao', specialty='AV_ELECTRICAL', phone='9876543210')
+        db.add(arjun)
+        db.flush()
+
+    # Reassign any old work orders referencing other technicians to Arjun Rao
+    db.query(WorkOrder).filter(WorkOrder.technician_id != arjun.id).update({WorkOrder.technician_id: arjun.id}, synchronize_session=False)
+    db.flush()
+
+    # Remove unlinked legacy technicians
+    legacy_techs = db.query(Technician).filter(
+        Technician.organization_id == 1,
+        Technician.id != arjun.id,
+        Technician.user_id.is_(None)
+    ).all()
+    for lt in legacy_techs:
+        db.delete(lt)
     db.flush()
 
     # 5. Seed Reference Timetable (Department of AI, B.Tech II-I, AY 2026-27, Regulation R24, Effective 29 June 2026)
@@ -336,22 +340,33 @@ def seed(db):
     if new_tt_entries:
         db.add_all(new_tt_entries)
 
-    # 6. Seed Standard Reference University Users (for Student, Faculty, Technician, Admin, Super Admin)
-    default_users = [
+    # 6. Seed Standard Reference University Users (Strictly 1 Person Per Role)
+    canonical_users = [
         {"email": "student@anurag.edu.in", "full_name": "Rahul Sharma (Student)", "role": "STUDENT", "department": "Department of AI", "specialty": None},
         {"email": "faculty@anurag.edu.in", "full_name": "Dr. Ananya S. (Faculty)", "role": "FACULTY", "department": "Department of AI", "specialty": None},
         {"email": "technician@anurag.edu.in", "full_name": "Arjun Rao (Technician)", "role": "TECHNICIAN", "department": "Campus Facilities", "specialty": "AV_ELECTRICAL", "tech_name": "Arjun Rao"},
-        {"email": "ramesh.verma@anurag.edu.in", "full_name": "Ramesh Verma (Facilities Specialist)", "role": "TECHNICIAN", "department": "Campus Facilities & HVAC", "specialty": "FACILITIES", "tech_name": "Ramesh Verma"},
-        {"email": "priya.nair@anurag.edu.in", "full_name": "Priya Nair (IT & Network Specialist)", "role": "TECHNICIAN", "department": "IT Infrastructure", "specialty": "IT_NETWORK", "tech_name": "Priya Nair"},
-        {"email": "anand.kumar@anurag.edu.in", "full_name": "Anand Kumar (Plumbing & Water Systems)", "role": "TECHNICIAN", "department": "Campus Maintenance", "specialty": "PLUMBING", "tech_name": "Anand Kumar"},
-        {"email": "operations.head@anurag.edu.in", "full_name": "Vikram Reddy (Maintenance & Facilities Head)", "role": "OPERATIONAL_HEAD", "department": "Campus Maintenance & Operations", "specialty": "FACILITIES_FLEET"},
-        {"email": "admin@anurag.edu.in", "full_name": "Campus Operations Admin", "role": "ADMIN", "department": "University Operations", "specialty": None},
-        {"email": "superadmin@anurag.edu.in", "full_name": "Platform Super Admin", "role": "SUPER_ADMIN", "department": "IT & Infrastructure", "specialty": None},
+        {"email": "operations.head@anurag.edu.in", "full_name": "Vikram Reddy (Operations Head)", "role": "OPERATIONAL_HEAD", "department": "Campus Operations", "specialty": "FACILITIES_FLEET"},
+        {"email": "admin@anurag.edu.in", "full_name": "Campus Operations Admin", "role": "ADMIN", "department": "University Administration", "specialty": None},
+        {"email": "superadmin@anurag.edu.in", "full_name": "Platform Super Admin", "role": "SUPER_ADMIN", "department": "IT & Governance", "specialty": None},
     ]
 
-    existing_user_emails = {u.email for u in db.query(User).filter(User.organization_id == 1).all()}
-    for u_data in default_users:
-        if u_data["email"] not in existing_user_emails:
+    canonical_emails = {u["email"] for u in canonical_users}
+    
+    # Remove all legacy/duplicate non-canonical users
+    legacy_users = db.query(User).filter(User.organization_id == 1, ~User.email.in_(canonical_emails)).all()
+    legacy_user_ids = [lu.id for lu in legacy_users]
+    if legacy_user_ids:
+        # Unlink foreign key in technicians
+        db.query(Technician).filter(Technician.user_id.in_(legacy_user_ids)).update({Technician.user_id: None}, synchronize_session=False)
+        db.flush()
+        for lu in legacy_users:
+            db.delete(lu)
+        db.flush()
+
+    # Ensure all canonical users exist with password123
+    for u_data in canonical_users:
+        u_obj = db.query(User).filter(User.organization_id == 1, User.email == u_data["email"]).first()
+        if not u_obj:
             u_obj = User(
                 organization_id=1,
                 email=u_data["email"],
@@ -364,9 +379,17 @@ def seed(db):
             )
             db.add(u_obj)
             db.flush()
-            if u_data.get("tech_name"):
-                tech_record = db.query(Technician).filter(Technician.name == u_data["tech_name"]).first()
-                if tech_record:
-                    tech_record.user_id = u_obj.id
+        else:
+            u_obj.full_name = u_data["full_name"]
+            u_obj.role = u_data["role"]
+            u_obj.department = u_data["department"]
+            u_obj.specialty = u_data["specialty"]
+            u_obj.hashed_password = hash_password("password123")
+            u_obj.is_active = True
+
+        if u_data.get("tech_name"):
+            tech_record = db.query(Technician).filter(Technician.name == u_data["tech_name"]).first()
+            if tech_record:
+                tech_record.user_id = u_obj.id
 
     db.commit()

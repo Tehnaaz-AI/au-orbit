@@ -9,7 +9,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from .database import Base, engine, get_db, ensure_schema
 from .config import (
-    CORS_ORIGINS, CONTACT_EMAIL, CONTACT_PHONE, CAMPUS_HOTLINE,
+    CORS_ORIGINS, CONTACT_EMAIL, CONTACT_EMAIL_PRIMARY, CONTACT_EMAIL_SECONDARY,
+    CONTACT_PHONE, CONTACT_PHONE_PRIMARY, CONTACT_PHONE_SECONDARY, CAMPUS_HOTLINE,
     CAMPUS_NAME, CAMPUS_ADDRESS, CAMPUS_HOURS
 )
 from .models import (
@@ -143,8 +144,12 @@ def health(db: Session = Depends(get_db)):
 def get_contact_info():
     """Retrieve official university helpdesk, operations hotline, and contact details configured in .env."""
     return {
-        'contact_email': CONTACT_EMAIL,
-        'contact_phone': CONTACT_PHONE,
+        'contact_email': CONTACT_EMAIL_PRIMARY,
+        'contact_email_primary': CONTACT_EMAIL_PRIMARY,
+        'contact_email_secondary': CONTACT_EMAIL_SECONDARY,
+        'contact_phone': CONTACT_PHONE_PRIMARY,
+        'contact_phone_primary': CONTACT_PHONE_PRIMARY,
+        'contact_phone_secondary': CONTACT_PHONE_SECONDARY,
         'campus_hotline': CAMPUS_HOTLINE,
         'campus_name': CAMPUS_NAME,
         'campus_address': CAMPUS_ADDRESS,
@@ -155,7 +160,7 @@ def get_contact_info():
 def submit_contact_inquiry(payload: ContactMessageIn, db: Session = Depends(get_db)):
     """
     Accepts campus contact desk inquiries, logs them into the operations queue,
-    and provides mailto delivery metadata.
+    and provides mailto delivery metadata for direct email dispatch.
     """
     import urllib.parse
     clean_name = (payload.name or "Campus User").strip()
@@ -176,13 +181,19 @@ def submit_contact_inquiry(payload: ContactMessageIn, db: Session = Depends(get_
     db.commit()
     db.refresh(inc)
 
-    mailto_link = f"mailto:{CONTACT_EMAIL}?subject={urllib.parse.quote(clean_subject)}&body={urllib.parse.quote(f'From: {clean_name} ({clean_email})\n\nMessage:\n{clean_msg}')}"
+    # Pre-generate direct mailto URL targeting primary & secondary operations inboxes
+    recipients = f"{CONTACT_EMAIL_PRIMARY}?cc={urllib.parse.quote(CONTACT_EMAIL_SECONDARY)}"
+    mailto_link = f"mailto:{recipients}&subject={urllib.parse.quote(clean_subject)}&body={urllib.parse.quote(f'From: {clean_name} ({clean_email})\n\nOfficial Inquiry:\n{clean_msg}')}"
 
     return {
         'status': 'success',
         'ticket_id': inc.id,
-        'recipient_email': CONTACT_EMAIL,
-        'recipient_phone': CONTACT_PHONE,
+        'recipient_email': CONTACT_EMAIL_PRIMARY,
+        'recipient_email_primary': CONTACT_EMAIL_PRIMARY,
+        'recipient_email_secondary': CONTACT_EMAIL_SECONDARY,
+        'recipient_phone': CONTACT_PHONE_PRIMARY,
+        'recipient_phone_primary': CONTACT_PHONE_PRIMARY,
+        'recipient_phone_secondary': CONTACT_PHONE_SECONDARY,
         'campus_hotline': CAMPUS_HOTLINE,
         'mailto_url': mailto_link,
         'message': f"Inquiry registered as Ticket #{inc.id} with the Campus Operations Desk."
@@ -222,20 +233,30 @@ def register(payload: UserRegisterIn, db: Session = Depends(get_db)):
 
     role_clean = (payload.role or 'STUDENT').strip().upper()
     
-    # SECURITY GATE: Public self-registration ONLY accepts STUDENT or FACULTY.
-    # Privileged roles (ADMIN, UNIVERSITY_ADMIN, SUPER_ADMIN, TECHNICIAN) must be provisioned by an administrator.
-    if role_clean in ('ADMIN', 'UNIVERSITY_ADMIN', 'SUPER_ADMIN', 'TECHNICIAN'):
+    # Privileged governance roles (ADMIN, UNIVERSITY_ADMIN, SUPER_ADMIN) must be provisioned by an administrator.
+    if role_clean in ('ADMIN', 'UNIVERSITY_ADMIN', 'SUPER_ADMIN', 'OPERATIONAL_HEAD'):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Security Violation: Privileged role '{role_clean}' cannot be self-registered publicly. Contact your university administrator."
+            detail=f"Security Violation: Administrative role '{role_clean}' cannot be self-registered. Contact your university administrator."
         )
-    if role_clean not in ('STUDENT', 'FACULTY'):
+
+    # Allow Student, Faculty, and Field Specialists (Technician/Plumber/IT Support)
+    if role_clean not in ('STUDENT', 'FACULTY', 'TECHNICIAN'):
         role_clean = 'STUDENT'
+
+    # STRICT DOMAIN VALIDATION: Students and Faculty must use official @anurag.edu.in emails
+    if role_clean in ('STUDENT', 'FACULTY'):
+        if not email_clean.endswith('@anurag.edu.in'):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Institutional Domain Required: Student and Faculty registrations must use an official '@anurag.edu.in' email address."
+            )
 
     role_colors = {
         'SUPER_ADMIN': '#ec4899',
         'ADMIN': '#00f2ff',
         'UNIVERSITY_ADMIN': '#00f2ff',
+        'OPERATIONAL_HEAD': '#10b981',
         'FACULTY': '#a855f7',
         'TECHNICIAN': '#f59e0b',
         'STUDENT': '#10b981'
@@ -248,7 +269,7 @@ def register(payload: UserRegisterIn, db: Session = Depends(get_db)):
         full_name=payload.full_name.strip(),
         role=role_clean,
         department=payload.department.strip() if payload.department else None,
-        specialty=payload.specialty.strip() if payload.specialty else None,
+        specialty=payload.specialty.strip() if payload.specialty else ("General Maintenance" if role_clean == 'TECHNICIAN' else None),
         phone=payload.phone.strip() if payload.phone else None,
         avatar_color=role_colors.get(role_clean, '#10b981'),
         avatar_url=payload.avatar_url
@@ -256,6 +277,20 @@ def register(payload: UserRegisterIn, db: Session = Depends(get_db)):
     db.add(user)
     db.commit()
     db.refresh(user)
+
+    # If registering as a Field Specialist / Technician, sync into the active technician dispatch pool
+    if role_clean == 'TECHNICIAN':
+        tech = db.query(Technician).filter(Technician.name == user.full_name).first()
+        if not tech:
+            tech = Technician(
+                organization_id=user.organization_id,
+                name=user.full_name,
+                specialty=user.specialty or "General Hardware & AV",
+                status="AVAILABLE",
+                phone=user.phone
+            )
+            db.add(tech)
+            db.commit()
 
     token = create_access_token(user.id, user.role, user.email, user.organization_id)
     return {
@@ -537,6 +572,7 @@ def incident_out(x: Incident, db: Session):
     priority_assessment = None
     resource_decision = None
     scheduling_decision = None
+    space_allocation_decision = None
 
     for e in events:
         if e.agent == 'Understanding Agent' and e.detail:
@@ -547,10 +583,31 @@ def incident_out(x: Incident, db: Session):
                 'is_location_ambiguous': e.detail.get('is_location_ambiguous', False),
                 'description': e.detail.get('description', x.description),
                 'urgency_signal': e.detail.get('urgency_signal', 'NORMAL'),
+                'resolution_type': e.detail.get('resolution_type', 'TECHNICIAN_DISPATCH'),
+                'requires_technician': e.detail.get('requires_technician', True),
+                'reallocated_room_code': e.detail.get('reallocated_room_code'),
+                'seating_requirement': e.detail.get('seating_requirement'),
                 'affected_activity': e.detail.get('affected_activity'),
                 'confidence': e.detail.get('confidence', 1.0),
                 'reasoning_summary': e.detail.get('reasoning_summary', ''),
                 'source': e.detail.get('source', 'deterministic_fallback')
+            }
+        elif e.agent == 'Space Allocation Agent' and e.detail and 'allocated_room' in e.detail:
+            space_allocation_decision = {
+                'reallocated': True,
+                'original_room': e.detail.get('original_room', x.room_code),
+                'allocated_room': e.detail.get('allocated_room'),
+                'allocated_room_kind': e.detail.get('allocated_room_kind'),
+                'allocated_block': e.detail.get('allocated_block'),
+                'allocated_floor': e.detail.get('allocated_floor'),
+                'time_slot': e.detail.get('time_slot'),
+                'period': e.detail.get('period'),
+                'day': e.detail.get('day'),
+                'subject': e.detail.get('subject'),
+                'faculty': e.detail.get('faculty'),
+                'section': e.detail.get('section'),
+                'candidates_evaluated': e.detail.get('top_candidates', []),
+                'decision_reason': e.detail.get('decision_reason', '')
             }
         elif e.agent == 'Priority Agent' and e.detail:
             priority_assessment = {
@@ -589,10 +646,29 @@ def incident_out(x: Incident, db: Session):
                 'policy_applied': e.detail.get('policy_applied', 'STANDARD_WINDOW')
             }
 
+    import re
+    rep_user = db.get(User, x.reporter_id) if hasattr(x, 'reporter_id') and x.reporter_id else None
+    if not rep_user and x.reporter:
+        email_match = re.search(r'[\w\.-]+@[\w\.-]+', x.reporter)
+        if email_match:
+            rep_user = db.query(User).filter(User.email == email_match.group(0).lower()).first()
+
+    rep_name = rep_user.full_name if rep_user else (x.reporter.split('(')[0].strip() if '(' in x.reporter else x.reporter)
+    email_found = re.search(r'[\w\.-]+@[\w\.-]+', x.reporter)
+    rep_email = rep_user.email if rep_user else (email_found.group(0) if email_found else None)
+    rep_role = rep_user.role if rep_user else ("FACULTY" if "prof" in x.reporter.lower() or "dr" in x.reporter.lower() else "STUDENT")
+    rep_phone = rep_user.phone if rep_user else "+91 98765 43210"
+    rep_dept = rep_user.department if rep_user else "Department of Computer Science & Engineering"
+
     return {
         'id': x.id,
         'organization_id': x.organization_id or 1,
         'reporter': x.reporter,
+        'reporter_name': rep_name,
+        'reporter_email': rep_email,
+        'reporter_role': rep_role,
+        'reporter_phone': rep_phone,
+        'reporter_department': rep_dept,
         'description': x.description,
         'room_code': x.room_code,
         'category': x.category,
@@ -606,6 +682,7 @@ def incident_out(x: Incident, db: Session):
         'priority_assessment': priority_assessment,
         'resource_decision': resource_decision,
         'scheduling_decision': scheduling_decision,
+        'space_allocation_decision': space_allocation_decision,
         'work_order': {
             'id': work.id,
             'organization_id': work.organization_id,

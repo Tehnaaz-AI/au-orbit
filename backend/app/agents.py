@@ -23,15 +23,18 @@ from .schemas import (
     PriorityAssessment,
     ResourceCandidate,
     ResourceDecision,
-    SchedulingDecision
+    SchedulingDecision,
+    SpaceCandidate,
+    SpaceAllocationDecision
 )
-from .config import GEMINI_API_KEY, AI_PROVIDER, AI_MODEL
+from .config import GROQ_API_KEY, GEMINI_API_KEY, AI_PROVIDER, AI_MODEL
 from .tools import (
     lookup_room_tool,
     find_room_tool,
     get_room_equipment_tool,
     get_current_timetable_tool,
     get_upcoming_timetable_tool,
+    find_available_rooms_tool,
     find_available_technicians_tool,
     find_facilities_tool
 )
@@ -49,7 +52,7 @@ EQUIPMENT_KEYWORDS = {
 }
 
 VALID_PRIORITIES = {"LOW", "NORMAL", "HIGH", "CRITICAL"}
-VALID_CATEGORIES = {"AV_ELECTRICAL", "IT_NETWORK", "FACILITIES"}
+VALID_CATEGORIES = {"AV_ELECTRICAL", "IT_NETWORK", "FACILITIES", "SPACE_ALLOCATION"}
 
 from sqlalchemy import event
 from .events import event_broadcaster
@@ -159,14 +162,24 @@ def log_agent_event(
 
 class UnderstandingAgent:
     """
-    Interprets natural language reports into structured information.
+    Interprets natural language reports into structured operational information.
     Uses Google Gemini with structured Pydantic schema when available,
     with an automatic deterministic rule-based fallback.
     """
 
     @classmethod
     def run(cls, db: Session, text: str, supplied_room: Optional[str] = None) -> StructuredUnderstanding:
-        # 1. Attempt Gemini structured understanding if configured
+        # 1. Attempt Groq structured understanding if configured
+        if GROQ_API_KEY and (AI_PROVIDER == "groq" or not GEMINI_API_KEY):
+            try:
+                groq_res = cls._call_groq(text, supplied_room)
+                if groq_res:
+                    return groq_res
+            except Exception as ex:
+                # Fall through on Groq error
+                pass
+
+        # 2. Attempt Gemini structured understanding if configured
         if GEMINI_API_KEY and AI_PROVIDER == "gemini":
             try:
                 gemini_res = cls._call_gemini(text, supplied_room)
@@ -176,8 +189,78 @@ class UnderstandingAgent:
                 # Fall through to deterministic fallback on any model/network error
                 pass
 
-        # 2. Resilient deterministic rule-based fallback
+        # 3. Resilient deterministic rule-based fallback
         return cls._deterministic_fallback(text, supplied_room, db)
+
+    @classmethod
+    def _call_groq(cls, text: str, supplied_room: Optional[str] = None) -> Optional[StructuredUnderstanding]:
+        from groq import Groq
+        client = Groq(api_key=GROQ_API_KEY)
+
+        system_instruction = (
+            "You are the Understanding Agent for AUOrbit, an autonomous university operations platform. "
+            "Interpret natural-language problem reports from students and faculty. "
+            "Return JSON matching this exact schema: {\n"
+            '  "problem_type": string,\n'
+            '  "category": "AV_ELECTRICAL" | "IT_NETWORK" | "FACILITIES" | "SPACE_ALLOCATION",\n'
+            '  "location": string | null,\n'
+            '  "is_location_ambiguous": boolean,\n'
+            '  "urgency_signal": "EMERGENCY" | "HIGH" | "NORMAL" | "LOW",\n'
+            '  "resolution_type": "SPACE_REALLOCATION" | "TECHNICIAN_DISPATCH",\n'
+            '  "requires_technician": boolean,\n'
+            '  "seating_requirement": number | null,\n'
+            '  "affected_activity": string | null,\n'
+            '  "confidence": float (0.0 to 1.0),\n'
+            '  "reasoning_summary": string\n'
+            "}\n"
+            "CRITICAL OPERATIONAL RULES:\n"
+            "1. NEVER invent or hallucinate a campus room code. "
+            "2. If a specific room code (e.g. B-204, I-302, APJ-HALL, SPORTS-COMPLEX, D-CANTEEN) is mentioned, set 'location'. "
+            "3. If the location is vague or not mentioned, set 'location' to null and 'is_location_ambiguous' to true. "
+            "4. Map category to: 'SPACE_ALLOCATION' if the issue is a venue capacity/fullness issue (venue is full, classroom occupied, double booked, students standing, no seats, chairs shortage), timetable mismatch/clash, room collision, lack of space, room needed for class/activity, or classroom relocation; otherwise AV_ELECTRICAL, IT_NETWORK, FACILITIES. "
+            "5. Map resolution_type to: 'SPACE_REALLOCATION' for ANY venue capacity/fullness issue, timetable mismatch/clash, double booking, seating shortage, overcrowding, lack of seats/space, or classroom relocation; otherwise 'TECHNICIAN_DISPATCH'. "
+            "6. If resolution_type is 'SPACE_REALLOCATION', set requires_technician to false and category to 'SPACE_ALLOCATION'. Technicians should ONLY be dispatched for physical maintenance, hardware defects, electrical faults, leaks, or broken fixtures. Pure venue, timetable, and space allocation issues are handled autonomously by the Space Allocation Agent with zero human technician dispatch. "
+            "7. Map urgency_signal to: EMERGENCY, HIGH, NORMAL, LOW. "
+            "8. Respond ONLY with valid JSON."
+        )
+
+        user_content = f"User Report: {text}"
+        if supplied_room:
+            user_content += f"\nSupplied Location Hint: {supplied_room}"
+
+        completion = client.chat.completions.create(
+            model=AI_MODEL if ("llama" in AI_MODEL or "mixtral" in AI_MODEL) else "llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": system_instruction},
+                {"role": "user", "content": user_content}
+            ],
+            temperature=0.1,
+            response_format={"type": "json_object"}
+        )
+
+        content = completion.choices[0].message.content
+        if not content:
+            return None
+
+        parsed = json.loads(content)
+        parsed["source"] = "groq"
+
+        if parsed.get("category") not in VALID_CATEGORIES:
+            parsed["category"] = "FACILITIES"
+
+        loc = parsed.get("location")
+        if loc and loc.strip().lower() in ("null", "none", "", "unspecified", "unknown"):
+            parsed["location"] = None
+            parsed["is_location_ambiguous"] = True
+        elif loc:
+            parsed["location"] = loc.strip().upper().replace(" ", "-")
+
+        # Guarantee consistency: SPACE_REALLOCATION must never require a technician
+        if parsed.get("resolution_type") == "SPACE_REALLOCATION":
+            parsed["requires_technician"] = False
+            parsed["category"] = "SPACE_ALLOCATION"
+
+        return StructuredUnderstanding(**parsed)
 
     @classmethod
     def _call_gemini(cls, text: str, supplied_room: Optional[str] = None) -> Optional[StructuredUnderstanding]:
@@ -187,15 +270,17 @@ class UnderstandingAgent:
         client = genai.Client(api_key=GEMINI_API_KEY)
         
         system_instruction = (
-            "You are the Understanding Agent for AUOrbit, an autonomous university operations system. "
+            "You are the Understanding Agent for AUOrbit, an autonomous university operations platform. "
             "Interpret natural-language problem reports from students and faculty. "
             "CRITICAL RULES:\n"
             "1. NEVER invent or hallucinate a campus room. "
             "2. If a specific room code (e.g. B-204, I-302, APJ-HALL, SPORTS-COMPLEX, D-CANTEEN) is mentioned, set 'location'. "
-            "3. If the location is vague (e.g. 'the lab', 'a classroom', 'somewhere on 3rd floor', 'washroom') or not mentioned, set 'location' to null and 'is_location_ambiguous' to true. "
-            "4. Map category to exactly one of: AV_ELECTRICAL, IT_NETWORK, FACILITIES. "
-            "5. Map urgency_signal to: EMERGENCY, HIGH, NORMAL, LOW. "
-            "6. Identify problem_type from: Projector, AC / HVAC, Wi-Fi AP, Lighting, Workstations, Water Supply / Plumbing, Sound System / Mic, Chalk Board, Furniture, General."
+            "3. If the location is vague or not mentioned, set 'location' to null and 'is_location_ambiguous' to true. "
+            "4. Map category to: 'SPACE_ALLOCATION' if the issue is a venue capacity/fullness issue (venue is full, classroom occupied, double booked, students standing, no seats, chairs shortage), timetable mismatch/clash, room collision, lack of space, room needed for class/activity, or classroom relocation; otherwise AV_ELECTRICAL, IT_NETWORK, FACILITIES. "
+            "5. Map resolution_type to: 'SPACE_REALLOCATION' for ANY venue capacity/fullness issue, timetable mismatch/clash, double booking, seating shortage, overcrowding, lack of seats/space, or classroom relocation; otherwise 'TECHNICIAN_DISPATCH'. "
+            "6. If resolution_type is 'SPACE_REALLOCATION', set requires_technician to false and category to 'SPACE_ALLOCATION'. Technicians should ONLY be dispatched for physical maintenance, hardware defects, electrical faults, leaks, or broken fixtures. "
+            "7. Map urgency_signal to: EMERGENCY, HIGH, NORMAL, LOW. "
+            "8. Identify problem_type from: Seating Shortage, Room Overcrowding, Venue Full / Occupied, Timetable Mismatch, Class Relocation, Venue Required, Projector, AC / HVAC, Wi-Fi AP, Lighting, Workstations, Water Supply / Plumbing, Sound System / Mic, Chalk Board, Furniture, General."
         )
 
         user_content = f"User Report: {text}"
@@ -203,7 +288,7 @@ class UnderstandingAgent:
             user_content += f"\nSupplied Location Hint: {supplied_room}"
 
         response = client.models.generate_content(
-            model=AI_MODEL,
+            model=AI_MODEL if "gemini" in AI_MODEL else "gemini-2.0-flash",
             contents=user_content,
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction,
@@ -231,6 +316,11 @@ class UnderstandingAgent:
             parsed["is_location_ambiguous"] = True
         elif loc:
             parsed["location"] = loc.strip().upper().replace(" ", "-")
+
+        # Guarantee consistency: SPACE_REALLOCATION must never require a technician
+        if parsed.get("resolution_type") == "SPACE_REALLOCATION":
+            parsed["requires_technician"] = False
+            parsed["category"] = "SPACE_ALLOCATION"
 
         return StructuredUnderstanding(**parsed)
 
@@ -275,28 +365,60 @@ class UnderstandingAgent:
             if any(re.search(r'\b' + re.escape(term) + r'\b', text.lower()) for term in ambiguous_terms):
                 is_ambiguous = True
 
-        # Category and problem type detection
         low = text.lower()
-        category = 'FACILITIES'
-        problem_type = 'General'
+        
+        # 1. Check for Seating / Venue Full / Space Allocation / Timetable Mismatch / Room Relocation
+        space_patterns = [
+            'seating', 'seat', 'seats', 'bench', 'benches', 'capacity', 'overflow', 'overflowing',
+            'overcrowded', 'overcrowding', 'relocate', 'relocation', 'shift class', 'shift classroom',
+            'switch room', 'switch classroom', 'empty room', 'vacant room', 'not enough room',
+            'insufficient seating', 'no space for students', 'additional classroom', 'extra room',
+            'class relocation', 'venue full', 'venue is full', 'room full', 'room is full', 'hall full',
+            'hall is full', 'lab full', 'lab is full', 'occupied', 'already occupied', 'room occupied',
+            'double booked', 'double booking', 'double-booked', 'double-booking', 'timetable mismatch',
+            'timetable clash', 'schedule mismatch', 'schedule clash', 'slot clash', 'class collision',
+            'two classes in same room', 'room collision', 'lecture clash', 'need venue', 'need classroom',
+            'need room', 'need lab', 'venue required', 'classroom needed', 'room required', 'space needed',
+            'students standing', 'standing in class', 'no seats available', 'no chairs', 'chairs shortage',
+            'space shortage', 'assign venue', 'assign classroom', 'allocate venue', 'allocate classroom'
+        ]
+        is_space_issue = any(re.search(r'\b' + re.escape(w) + r'\b', low) for w in space_patterns)
 
-        for equip_name, kw_list in EQUIPMENT_KEYWORDS.items():
-            if any(re.search(r'\b' + re.escape(kw) + r'\b', low) for kw in kw_list):
-                problem_type = equip_name
-                if equip_name in ('Projector', 'Chalk Board', 'Sound System / Mic', 'Lighting'):
-                    category = 'AV_ELECTRICAL'
-                elif equip_name in ('Wi-Fi AP', 'Workstations'):
-                    category = 'IT_NETWORK'
-                else:
-                    category = 'FACILITIES'
-                break
+        if is_space_issue:
+            if any(k in low for k in ['timetable mismatch', 'timetable clash', 'schedule mismatch', 'schedule clash', 'slot clash', 'class collision', 'double booked', 'double booking', 'double-booked']):
+                problem_type = 'Timetable Mismatch'
+            elif any(k in low for k in ['venue full', 'venue is full', 'room full', 'room is full', 'hall full', 'hall is full', 'occupied', 'already occupied', 'room occupied']):
+                problem_type = 'Venue Full / Occupied'
+            elif any(k in low for k in ['need venue', 'need classroom', 'need room', 'need lab', 'venue required', 'classroom needed', 'room required', 'space needed', 'assign venue', 'assign classroom']):
+                problem_type = 'Venue Required'
+            else:
+                problem_type = 'Seating Shortage'
+            category = 'SPACE_ALLOCATION'
+            resolution_type = 'SPACE_REALLOCATION'
+            requires_technician = False
+        else:
+            category = 'FACILITIES'
+            problem_type = 'General'
+            resolution_type = 'TECHNICIAN_DISPATCH'
+            requires_technician = True
+
+            for equip_name, kw_list in EQUIPMENT_KEYWORDS.items():
+                if any(re.search(r'\b' + re.escape(kw) + r'\b', low) for kw in kw_list):
+                    problem_type = equip_name
+                    if equip_name in ('Projector', 'Chalk Board', 'Sound System / Mic', 'Lighting'):
+                        category = 'AV_ELECTRICAL'
+                    elif equip_name in ('Wi-Fi AP', 'Workstations'):
+                        category = 'IT_NETWORK'
+                    else:
+                        category = 'FACILITIES'
+                    break
 
         # Urgency signals
         is_emergency = any(re.search(r'\b' + re.escape(w) + r'\b', low) for w in [
             'urgent', 'emergency', 'danger', 'hazardous', 'hazard', 'spark', 'sparks',
             'fire', 'flooding', 'severe leak', 'immediately', 'critical', 'smoke'
         ])
-        urgency_signal = 'EMERGENCY' if is_emergency else ('HIGH' if 'urgent' in low else 'NORMAL')
+        urgency_signal = 'EMERGENCY' if is_emergency else ('HIGH' if ('urgent' in low or is_space_issue) else 'NORMAL')
 
         # Affected activity
         affected_activity = None
@@ -314,11 +436,235 @@ class UnderstandingAgent:
             is_location_ambiguous=is_ambiguous or (room is None),
             description=text.strip(),
             urgency_signal=urgency_signal,
+            resolution_type=resolution_type,
+            requires_technician=requires_technician,
             affected_activity=affected_activity,
-            confidence=0.9 if room else 0.7,
-            reasoning_summary=f"Extracted {problem_type} issue in {room or 'unspecified location'} ({category}) via deterministic parser.",
+            confidence=0.95 if room else 0.75,
+            reasoning_summary=f"Extracted {problem_type} issue in {room or 'unspecified location'} ({category}) -> Resolution Strategy: {resolution_type}.",
             source="deterministic_fallback"
         )
+
+
+class SpaceAllocationAgent:
+    """
+    Stage 4D Autonomous Space Allocation & Classroom Reallocation Agent.
+    When an operational incident is recognized as a seating shortage, overcrowding, 
+    or room reallocation request:
+    1. Gathers active timetable session & section schedule for the source room.
+    2. Queries live campus timetable for completely vacant, conflict-free rooms in the same building/block.
+    3. Evaluates space candidates by proximity (same block, same/adjacent floor), room type, and capacity.
+    4. Autonomously reallocates the class to the optimal vacant room with complete explainable reasoning.
+    5. Dispatches zero technician work orders, ensuring technician queues remain strictly maintenance-focused.
+    """
+
+    @classmethod
+    def run(
+        cls,
+        db: Session,
+        incident: Incident,
+        understanding: StructuredUnderstanding,
+        context: ContextFactSheet,
+        timestamp: Optional[datetime] = None,
+        day: Optional[str] = None,
+        time_str: Optional[str] = None
+    ) -> SpaceAllocationDecision:
+        now = timestamp or datetime.now(timezone.utc)
+        cur_day = day or now.strftime('%A')
+        cur_time = time_str or now.strftime('%H:%M')
+        
+        orig_room_code = incident.room_code or understanding.location
+        orig_room = db.query(Room).filter(Room.code == orig_room_code).first() if orig_room_code else None
+        target_block = orig_room.block if orig_room else (orig_room_code.split('-')[0] if orig_room_code and '-' in orig_room_code else 'I')
+        orig_floor = orig_room.floor if orig_room else 3
+
+        # 1. Identify active session in source room
+        current_class = context.current_class
+        if not current_class and orig_room_code:
+            current_class = get_current_timetable_tool(db, orig_room_code, timestamp=now, day=cur_day, time_str=cur_time)
+            
+        cur_period = current_class.get('period', 1) if current_class else 1
+        start_time = current_class.get('start_time', '09:00') if current_class else '09:00'
+        end_time = current_class.get('end_time', '09:55') if current_class else '09:55'
+        subject = current_class.get('subject', 'Scheduled Lecture') if current_class else 'Academic Lecture'
+        faculty = current_class.get('faculty', 'Faculty Instructor') if current_class else 'Instructor'
+        section = current_class.get('section', 'AI-A') if current_class else 'AI Section'
+
+        # Log inspection event
+        log_agent_event(
+            db=db,
+            incident_id=incident.id,
+            agent="Space Allocation Agent",
+            action=f"Inspecting active timetable session in {orig_room_code or 'Unspecified'}: {subject} ({section}) by {faculty} [{cur_day} Period {cur_period} {start_time}-{end_time}]",
+            tool="get_current_timetable_tool",
+            detail={
+                "room_code": orig_room_code,
+                "active_class": current_class,
+                "period": cur_period,
+                "day": cur_day,
+                "time_slot": f"{start_time} - {end_time}"
+            },
+            status="SUCCESS"
+        )
+
+        # 2. Query available / vacant rooms in same block and across campus for this day & period
+        org_id = incident.organization_id or 1
+        
+        # Candidate rooms in same block first, then adjacent blocks
+        candidate_rooms = db.query(Room).filter(
+            Room.organization_id == org_id,
+            Room.availability == 'AVAILABLE',
+            Room.code != (orig_room_code or '')
+        ).all()
+
+        # Find all occupied room codes in timetable for this day and period
+        occupied_entries = db.query(TimetableEntry.room_code).filter(
+            TimetableEntry.organization_id == org_id,
+            TimetableEntry.day == cur_day,
+            TimetableEntry.period == cur_period
+        ).all()
+        occupied_room_codes = {r[0] for r in occupied_entries if r[0]}
+
+        candidates_evaluated: List[SpaceCandidate] = []
+        for r in candidate_rooms:
+            is_vacant = r.code not in occupied_room_codes
+            if not is_vacant:
+                continue
+
+            # Calculate proximity & suitability score (0 to 100)
+            score = 0.0
+            reasons = []
+
+            # Block match
+            if r.block == target_block:
+                score += 45.0
+                reasons.append(f"Same academic complex (Block {r.block})")
+                dist_factor = "SAME_BLOCK"
+            else:
+                score += 15.0
+                reasons.append(f"Adjacent block ({r.block})")
+                dist_factor = f"BLOCK_{r.block}"
+
+            # Floor match
+            floor_diff = abs(r.floor - orig_floor)
+            if floor_diff == 0:
+                score += 25.0
+                reasons.append(f"Same floor ({r.floor})")
+            elif floor_diff == 1:
+                score += 15.0
+                reasons.append(f"Adjacent floor ({r.floor})")
+            else:
+                score += 5.0
+                reasons.append(f"Floor {r.floor}")
+
+            # Room type match (SEMINAR_HALL has high capacity for overflow; CLASSROOM is standard)
+            if r.kind == 'SEMINAR_HALL':
+                score += 20.0
+                reasons.append("Seminar Hall (Expanded capacity for overflow)")
+            elif r.kind == 'CLASSROOM':
+                score += 15.0
+                reasons.append("Standard lecture classroom")
+            elif r.kind == 'LAB':
+                score += 5.0
+                reasons.append("Laboratory space")
+            else:
+                score += 5.0
+
+            reasons.append(f"0 timetable conflicts for {cur_day} Period {cur_period}")
+
+            candidate = SpaceCandidate(
+                room_code=r.code,
+                block=r.block,
+                floor=r.floor,
+                kind=r.kind,
+                department=r.department,
+                score=score,
+                distance_factor=dist_factor,
+                is_vacant=True,
+                reason="; ".join(reasons)
+            )
+            candidates_evaluated.append(candidate)
+
+        # Sort candidates descending by score
+        candidates_evaluated.sort(key=lambda c: c.score, reverse=True)
+
+        log_agent_event(
+            db=db,
+            incident_id=incident.id,
+            agent="Space Allocation Agent",
+            action=f"Queried campus spaces; identified {len(candidates_evaluated)} conflict-free candidate rooms in Block {target_block}",
+            tool="find_available_rooms_tool",
+            detail={
+                "target_block": target_block,
+                "candidates_count": len(candidates_evaluated),
+                "top_candidates": [c.model_dump() for c in candidates_evaluated[:3]]
+            },
+            status="SUCCESS"
+        )
+
+        if candidates_evaluated:
+            top_candidate = candidates_evaluated[0]
+            allocated_room = top_candidate.room_code
+            
+            decision_reason = (
+                f"Autonomous Space Reallocation: Relocated {section} ({subject} with {faculty}) from congested {orig_room_code or 'current room'} "
+                f"to vacant {allocated_room} (Block {top_candidate.block}, Floor {top_candidate.floor}, {top_candidate.kind}). "
+                f"Verified 0 active schedule conflicts for Period {cur_period} ({start_time} - {end_time})."
+            )
+
+            log_agent_event(
+                db=db,
+                incident_id=incident.id,
+                agent="Space Allocation Agent",
+                action=f"Autonomous Space Reallocation: Assigned vacant venue {allocated_room} to {section} for {subject} (Score: {top_candidate.score:.1f}/100)",
+                tool="reallocate_classroom",
+                detail={
+                    "original_room": orig_room_code,
+                    "allocated_room": allocated_room,
+                    "allocated_room_kind": top_candidate.kind,
+                    "allocated_block": top_candidate.block,
+                    "allocated_floor": top_candidate.floor,
+                    "section": section,
+                    "subject": subject,
+                    "faculty": faculty,
+                    "period": cur_period,
+                    "time_slot": f"{start_time} - {end_time}",
+                    "decision_reason": decision_reason
+                },
+                status="SUCCESS"
+            )
+
+            return SpaceAllocationDecision(
+                reallocated=True,
+                original_room=orig_room_code,
+                allocated_room=allocated_room,
+                allocated_room_kind=top_candidate.kind,
+                allocated_block=top_candidate.block,
+                allocated_floor=top_candidate.floor,
+                time_slot=f"{start_time} - {end_time}",
+                period=cur_period,
+                day=cur_day,
+                subject=subject,
+                faculty=faculty,
+                section=section,
+                candidates_evaluated=candidates_evaluated[:5],
+                decision_reason=decision_reason
+            )
+        else:
+            fallback_reason = f"No vacant classrooms found in Block {target_block} for Period {cur_period}. Escalated to Operations Head for manual space coordination."
+            log_agent_event(
+                db=db,
+                incident_id=incident.id,
+                agent="Space Allocation Agent",
+                action=fallback_reason,
+                tool="reallocate_classroom",
+                detail={"reason": "NO_VACANT_ROOMS"},
+                status="WAITING"
+            )
+            return SpaceAllocationDecision(
+                reallocated=False,
+                original_room=orig_room_code,
+                decision_reason=fallback_reason
+            )
 
 
 class ContextAgent:

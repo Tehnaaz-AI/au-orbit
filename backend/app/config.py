@@ -14,9 +14,10 @@ for p in env_paths:
     if p.exists():
         load_dotenv(dotenv_path=p, override=True)
 
+GROQ_API_KEY = (os.getenv("GROQ_API_KEY") or "").strip()
 GEMINI_API_KEY = (os.getenv("GEMINI_API_KEY") or "").strip()
-AI_PROVIDER = os.getenv("AI_PROVIDER", "gemini").lower().strip()
-AI_MODEL = os.getenv("AI_MODEL", "gemini-2.0-flash").strip()
+AI_PROVIDER = os.getenv("AI_PROVIDER", "groq" if GROQ_API_KEY else "groq").lower().strip()
+AI_MODEL = os.getenv("AI_MODEL", "llama-3.3-70b-versatile" if AI_PROVIDER == "groq" else "gemini-2.0-flash").strip()
 DATABASE_URL = (os.getenv("DATABASE_URL") or "sqlite:///./auorbit.db").strip()
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
@@ -42,10 +43,16 @@ DEMO_WHATSAPP_TO = os.getenv("DEMO_WHATSAPP_TO", "")
 TWILIO_CONTENT_SID = os.getenv("TWILIO_CONTENT_SID")
 N8N_WEBHOOK_URL = os.getenv("N8N_WEBHOOK_URL")
 
-# Campus Contact & Helpdesk Settings
-CONTACT_EMAIL = os.getenv("CONTACT_EMAIL", "support@auorbit.edu.in")
-CONTACT_PHONE = os.getenv("CONTACT_PHONE", "+91 40 2345 6789")
-CAMPUS_HOTLINE = os.getenv("CAMPUS_HOTLINE", "+91 40 2345 9999")
+# Campus Contact & Helpdesk Settings (Strictly Primary & Secondary)
+CONTACT_EMAIL_PRIMARY = os.getenv("CONTACT_EMAIL_PRIMARY", "24eg106c58@anurag.edu.in")
+CONTACT_EMAIL_SECONDARY = os.getenv("CONTACT_EMAIL_SECONDARY", "24eg106c63@anurag.edu.in")
+CONTACT_EMAIL = CONTACT_EMAIL_PRIMARY
+
+CONTACT_PHONE_PRIMARY = os.getenv("CONTACT_PHONE_PRIMARY", "+91 9281478453")
+CONTACT_PHONE_SECONDARY = os.getenv("CONTACT_PHONE_SECONDARY", "+91 9490572567")
+CONTACT_PHONE = CONTACT_PHONE_PRIMARY
+
+CAMPUS_HOTLINE = CONTACT_PHONE_PRIMARY
 CAMPUS_NAME = os.getenv("CAMPUS_NAME", "Anurag University Campus")
 CAMPUS_ADDRESS = os.getenv("CAMPUS_ADDRESS", "Venkatapur, Ghatkesar, Hyderabad, Telangana 500088")
 CAMPUS_HOURS = os.getenv("CAMPUS_HOURS", "Monday - Saturday: 08:30 AM - 05:30 PM (24/7 AI Triage)")

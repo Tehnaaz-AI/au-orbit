@@ -137,7 +137,11 @@ class TechnicianOut(BaseModel):
 
 class ContactInfoOut(BaseModel):
     contact_email: str
+    contact_email_primary: str
+    contact_email_secondary: str
     contact_phone: str
+    contact_phone_primary: str
+    contact_phone_secondary: str
     campus_hotline: str
     campus_name: str
     campus_address: str
@@ -219,7 +223,7 @@ class StructuredUnderstanding(BaseModel):
     )
     category: str = Field(
         default="FACILITIES",
-        description="High level category: AV_ELECTRICAL, IT_NETWORK, or FACILITIES"
+        description="High level category: AV_ELECTRICAL, IT_NETWORK, FACILITIES, or SPACE_ALLOCATION"
     )
     location: Optional[str] = Field(
         default=None,
@@ -235,6 +239,22 @@ class StructuredUnderstanding(BaseModel):
     urgency_signal: str = Field(
         default="NORMAL",
         description="Urgency signal extracted from report: EMERGENCY, HIGH, NORMAL, or LOW"
+    )
+    resolution_type: str = Field(
+        default="TECHNICIAN_DISPATCH",
+        description="Resolution strategy: 'TECHNICIAN_DISPATCH', 'SPACE_REALLOCATION', or 'FACILITY_MANAGEMENT'"
+    )
+    requires_technician: bool = Field(
+        default=True,
+        description="Whether a physical technician is required to resolve this incident"
+    )
+    reallocated_room_code: Optional[str] = Field(
+        default=None,
+        description="Target room assigned if space reallocation was requested"
+    )
+    seating_requirement: Optional[int] = Field(
+        default=None,
+        description="Estimated seating or capacity needed if reported"
     )
     affected_activity: Optional[str] = Field(
         default=None,
@@ -341,6 +361,33 @@ class SchedulingDecision(BaseModel):
     decision_reason: str = ""
     policy_applied: str = "STANDARD_WINDOW"
 
+class SpaceCandidate(BaseModel):
+    room_code: str
+    block: str
+    floor: int
+    kind: str
+    department: Optional[str] = None
+    score: float
+    distance_factor: str
+    is_vacant: bool = True
+    reason: str
+
+class SpaceAllocationDecision(BaseModel):
+    reallocated: bool = False
+    original_room: Optional[str] = None
+    allocated_room: Optional[str] = None
+    allocated_room_kind: Optional[str] = None
+    allocated_block: Optional[str] = None
+    allocated_floor: Optional[int] = None
+    time_slot: Optional[str] = None
+    period: Optional[int] = None
+    day: Optional[str] = None
+    subject: Optional[str] = None
+    faculty: Optional[str] = None
+    section: Optional[str] = None
+    candidates_evaluated: List[SpaceCandidate] = Field(default_factory=list)
+    decision_reason: str = ""
+
 class VerificationResult(BaseModel):
     outcome: str = "PASS"
     incident_id: int
@@ -370,6 +417,11 @@ class IncidentOut(BaseModel):
     id: int
     organization_id: int = 1
     reporter: str
+    reporter_name: Optional[str] = None
+    reporter_email: Optional[str] = None
+    reporter_role: Optional[str] = None
+    reporter_phone: Optional[str] = None
+    reporter_department: Optional[str] = None
     description: str
     room_code: Optional[str] = None
     category: str
@@ -384,6 +436,7 @@ class IncidentOut(BaseModel):
     priority_assessment: Optional[PriorityAssessment] = None
     resource_decision: Optional[ResourceDecision] = None
     scheduling_decision: Optional[SchedulingDecision] = None
+    space_allocation_decision: Optional[SpaceAllocationDecision] = None
     work_order: Optional[Dict[str, Any]] = None
     work_orders: List[Dict[str, Any]] = Field(default_factory=list)
     runs: List[AgentRunOut] = Field(default_factory=list)
