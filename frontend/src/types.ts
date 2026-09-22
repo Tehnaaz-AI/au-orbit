@@ -11,7 +11,11 @@ export interface Organization {
 
 export interface ContactInfo {
   contact_email: string;
+  contact_email_primary?: string;
+  contact_email_secondary?: string;
   contact_phone: string;
+  contact_phone_primary?: string;
+  contact_phone_secondary?: string;
   campus_hotline: string;
   campus_name: string;
   campus_address: string;
@@ -81,6 +85,10 @@ export interface UnderstandingDetail {
   is_location_ambiguous?: boolean;
   description?: string;
   urgency_signal?: string;
+  resolution_type?: 'TECHNICIAN_DISPATCH' | 'SPACE_REALLOCATION' | 'FACILITY_MANAGEMENT' | string;
+  requires_technician?: boolean;
+  reallocated_room_code?: string;
+  seating_requirement?: number;
   affected_activity?: string;
   confidence?: number;
   reasoning_summary?: string;
@@ -123,10 +131,45 @@ export interface SchedulingDecision {
   policy_applied?: string;
 }
 
+export interface SpaceCandidate {
+  room_code: string;
+  block: string;
+  floor: number;
+  kind: string;
+  department?: string | null;
+  score: number;
+  distance_factor: string;
+  is_vacant: boolean;
+  reason: string;
+}
+
+export interface SpaceAllocationDecision {
+  reallocated: boolean;
+  original_room?: string | null;
+  allocated_room?: string | null;
+  reallocated_room_code?: string | null;
+  allocated_room_kind?: string | null;
+  allocated_block?: string | null;
+  allocated_floor?: number | null;
+  time_slot?: string | null;
+  period?: number | null;
+  day?: string | null;
+  subject?: string | null;
+  faculty?: string | null;
+  section?: string | null;
+  candidates_evaluated?: SpaceCandidate[];
+  decision_reason?: string;
+}
+
 export interface Incident {
   id: number;
   organization_id: number;
   reporter: string;
+  reporter_name?: string | null;
+  reporter_email?: string | null;
+  reporter_role?: string | null;
+  reporter_phone?: string | null;
+  reporter_department?: string | null;
   description: string;
   room_code?: string | null;
   category: string;
@@ -140,6 +183,7 @@ export interface Incident {
   priority_assessment?: PriorityAssessment | null;
   resource_decision?: ResourceDecision | null;
   scheduling_decision?: SchedulingDecision | null;
+  space_allocation_decision?: SpaceAllocationDecision | null;
   work_order?: WorkOrderItem | null;
   work_orders?: WorkOrderItem[];
   runs?: AgentRun[];

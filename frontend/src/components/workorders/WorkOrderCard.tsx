@@ -214,9 +214,29 @@ export const WorkOrderCard: React.FC<WorkOrderCardProps> = ({
                 <MediaUploadZone
                   mediaUrls={resolutionMedia}
                   onChange={setResolutionMedia}
-                  label="Attach Post-Fix Photo / Video Proof (Mandatory for verification)"
-                  helperText="Upload photo of repaired projector, restored breaker, or fixed equipment."
+                  label="Attach Post-Fix Photo / Video Proof (Required to Complete Job)"
+                  helperText="Upload or snap photo of repaired equipment, restored wiring, or fixed fixture."
                 />
+
+                {resolutionMedia.length === 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--color-primary-subtle)', padding: '0.4rem 0.6rem', borderRadius: 'var(--radius-xs)', fontSize: '0.74rem' }}>
+                    <span style={{ color: 'var(--primary-dark)', fontWeight: 600 }}>
+                      ⚠️ Photo proof is required to submit job completion.
+                    </span>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => {
+                        // Quick snap simulation demo photo
+                        const demoPhoto = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200" viewBox="0 0 300 200"><rect width="300" height="200" fill="%232D3748"/><text x="50%25" y="45%25" dominant-baseline="middle" text-anchor="middle" fill="%2348BB78" font-size="16" font-family="sans-serif" font-weight="bold">✓ REPAIR VERIFIED</text><text x="50%25" y="60%25" dominant-baseline="middle" text-anchor="middle" fill="%23E2E8F0" font-size="12" font-family="sans-serif">Component tested and functional</text></svg>';
+                        setResolutionMedia([...resolutionMedia, demoPhoto]);
+                      }}
+                      style={{ padding: '0.15rem 0.45rem', fontSize: '0.72rem', color: 'var(--primary-dark)' }}
+                    >
+                      + Quick Photo Proof
+                    </button>
+                  </div>
+                )}
 
                 <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-end', marginTop: '0.25rem' }}>
                   <button
@@ -231,11 +251,19 @@ export const WorkOrderCard: React.FC<WorkOrderCardProps> = ({
                     type="button"
                     className="btn btn-primary btn-sm"
                     onClick={() => {
+                      if (resolutionMedia.length === 0) {
+                        alert('Photo proof upload is required before completing the work order.');
+                        return;
+                      }
                       onCompleteJob(workOrder.id, notes, resolutionMedia);
                       setShowNotes(false);
                     }}
-                    disabled={isActing}
-                    style={{ fontSize: '0.78rem', background: 'var(--status-success-text)' }}
+                    disabled={isActing || resolutionMedia.length === 0}
+                    style={{ 
+                      fontSize: '0.78rem', 
+                      background: resolutionMedia.length === 0 ? 'var(--border-default)' : 'var(--status-success-text)',
+                      cursor: resolutionMedia.length === 0 ? 'not-allowed' : 'pointer'
+                    }}
                   >
                     Confirm Completion & Send to Verification
                   </button>

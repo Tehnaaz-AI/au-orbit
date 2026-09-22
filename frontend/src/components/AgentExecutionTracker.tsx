@@ -25,7 +25,8 @@ import {
   CheckCircle2,
   AlertTriangle,
   Zap,
-  Layers
+  Layers,
+  Building2
 } from 'lucide-react';
 
 interface AgentExecutionTrackerProps {
@@ -42,27 +43,67 @@ interface AgentStage {
   detailKey?: string;
 }
 
-const AGENT_STAGES: AgentStage[] = [
-  { id: 'intake', name: 'Problem Intake', role: 'Multimodal Ingestion', icon: <Sparkles size={16} />, description: 'Ingests reported complaint and photo/video attachments.' },
-  { id: 'understanding', name: 'Understanding Agent', role: 'Entity & Intent Parser', icon: <Cpu size={16} />, description: 'Extracts spatial coordinates, problem category, and failure signals.' },
-  { id: 'context', name: 'Context Agent', role: 'Spatial & Timetable Resolver', icon: <MapPin size={16} />, description: 'Cross-checks room inventory, active courses, and equipment state.' },
-  { id: 'prioritization', name: 'Prioritization Agent', role: 'Urgency Escalator', icon: <Flame size={16} />, description: 'Escalates priority to Emergency or High if lectures/exams are impacted.' },
-  { id: 'resource', name: 'Resource Agent', role: 'Specialist Matcher', icon: <Wrench size={16} />, description: 'Scores and selects qualified technicians based on historical capability.' },
-  { id: 'scheduling', name: 'Scheduling Agent', role: 'Slot Allocator', icon: <Calendar size={16} />, description: 'Books non-conflicting maintenance window adhering to policy.' },
-  { id: 'execution', name: 'Execution Agent', role: 'Field Dispatch Orchestrator', icon: <Activity size={16} />, description: 'Dispatches work order, tracks technician actions, and receives repair proof.' },
-  { id: 'verification', name: 'Verification Agent', role: 'Physical Audit Sign-Off', icon: <Shield size={16} />, description: 'Audits visual Before/After evidence and verifies restored space readiness.' },
-  { id: 'replanning', name: 'Replanning Agent', role: 'Self-Healing Recovery', icon: <RefreshCw size={16} />, description: 'Autonomously re-evaluates and excludes failed resources if verification fails.' }
-];
+const GET_AGENT_STAGES = (incident: Incident): AgentStage[] => {
+  const isSpaceAllocation = incident.category === 'SPACE_ALLOCATION' || 
+    incident.space_allocation_decision?.reallocated || 
+    incident.understanding?.resolution_type === 'SPACE_REALLOCATION';
+
+  if (isSpaceAllocation) {
+    return [
+      { id: 'intake', name: 'Multimodal Intake', role: 'Problem Ingestion', icon: <Sparkles size={16} />, description: 'Ingests venue/capacity/timetable problem report and spatial coordinates.' },
+      { id: 'understanding', name: 'Understanding Agent', role: 'Intent & Entity Parser', icon: <Cpu size={16} />, description: 'Extracts spatial constraints and determines autonomous SPACE_REALLOCATION strategy.' },
+      { id: 'context', name: 'Context Agent', role: 'Live Timetable Checker', icon: <MapPin size={16} />, description: 'Validates active section schedule, enrolled batch, and source room occupancy.' },
+      { id: 'prioritization', name: 'Prioritization Agent', role: 'Academic Urgency Escalator', icon: <Flame size={16} />, description: 'Evaluates lecture impact and escalates priority to prevent instructional downtime.' },
+      { id: 'space_allocation', name: 'Space Allocation Agent', role: 'Autonomous Venue Optimizer', icon: <Building2 size={16} />, description: 'Scans university timetable across block/floors and assigns optimal vacant venue.' },
+      { id: 'resolution', name: 'Resolution Agent', role: 'Zero-Dispatch Finalizer', icon: <CheckCircle2 size={16} />, description: 'Notifies students and faculty of reallocated room. Zero technician work orders created.' }
+    ];
+  }
+
+  if (incident.category === 'IT_NETWORK') {
+    return [
+      { id: 'intake', name: 'Problem Intake', role: 'Multimodal Ingestion', icon: <Sparkles size={16} />, description: 'Ingests network/connectivity report and telemetry evidence.' },
+      { id: 'understanding', name: 'Understanding Agent', role: 'Network Protocol Parser', icon: <Cpu size={16} />, description: 'Classifies IT_NETWORK outage and determines network technician requirement.' },
+      { id: 'context', name: 'Context Agent', role: 'Subnet & Switch Resolver', icon: <MapPin size={16} />, description: 'Checks lab workstations, Wi-Fi AP coordinates, and active practical sessions.' },
+      { id: 'prioritization', name: 'Prioritization Agent', role: 'Lab Impact Escalator', icon: <Flame size={16} />, description: 'Escalates priority to High if computer lab examination or practicals are active.' },
+      { id: 'resource', name: 'Resource Agent', role: 'Network Specialist Matcher', icon: <Wrench size={16} />, description: 'Evaluates network technicians by IT certification and availability.' },
+      { id: 'scheduling', name: 'Scheduling Agent', role: 'Dispatch Slot Allocator', icon: <Calendar size={16} />, description: 'Allocates rapid response window conforming to university IT policy.' },
+      { id: 'execution', name: 'Execution Agent', role: 'Field Specialist Dispatch', icon: <Activity size={16} />, description: 'Issues work order, monitors switch calibration, and captures proof.' },
+      { id: 'verification', name: 'Verification Agent', role: 'Connectivity Audit', icon: <Shield size={16} />, description: 'Audits network connectivity metrics and signs off resolution.' },
+      { id: 'replanning', name: 'Replanning Agent', role: 'Self-Healing Fallback', icon: <RefreshCw size={16} />, description: 'Re-assigns tier-2 IT network specialist if connectivity verification fails.' }
+    ];
+  }
+
+  return [
+    { id: 'intake', name: 'Problem Intake', role: 'Multimodal Ingestion', icon: <Sparkles size={16} />, description: 'Ingests reported complaint, room hint, and photo/video evidence.' },
+    { id: 'understanding', name: 'Understanding Agent', role: 'Groq/LLM Entity Parser', icon: <Cpu size={16} />, description: 'Interprets failure signals, affected equipment, and category via Groq AI.' },
+    { id: 'context', name: 'Context Agent', role: 'Spatial & Timetable Resolver', icon: <MapPin size={16} />, description: 'Cross-checks room database, active lecture schedules, and hardware telemetry.' },
+    { id: 'prioritization', name: 'Prioritization Agent', role: 'Dynamic Urgency Escalator', icon: <Flame size={16} />, description: 'Escalates priority to Emergency or High if active classes/exams are disrupted.' },
+    { id: 'resource', name: 'Resource Agent', role: 'Specialist Matcher', icon: <Wrench size={16} />, description: 'Scores certified trade technicians by skill matching and active workload.' },
+    { id: 'scheduling', name: 'Scheduling Agent', role: 'Slot Allocator', icon: <Calendar size={16} />, description: 'Schedules optimal maintenance window without causing lecture conflicts.' },
+    { id: 'execution', name: 'Execution Agent', role: 'Field Dispatch Orchestrator', icon: <Activity size={16} />, description: 'Generates digital work order and enforces mandatory photo repair proof.' },
+    { id: 'verification', name: 'Verification Agent', role: 'Visual Dual-Proof Audit', icon: <Shield size={16} />, description: 'Performs side-by-side Before/After inspection with faculty/ops sign-off.' },
+    { id: 'replanning', name: 'Replanning Agent', role: 'Autonomous Recovery Loop', icon: <RefreshCw size={16} />, description: 'Excludes failed specialist and autonomously dispatches replacement if audit fails.' }
+  ];
+};
 
 export const AgentExecutionTracker: React.FC<AgentExecutionTrackerProps> = ({ incident, compact = false }) => {
   const [events, setEvents] = useState<AgentEvent[]>(incident.events || []);
   const [selectedEventDetails, setSelectedEventDetails] = useState<AgentEvent | null>(null);
   const [showTechnicalDrawer, setShowTechnicalDrawer] = useState(false);
 
-  // Simulation Mode State
-  const [isSimulating, setIsSimulating] = useState(false);
+  // Simulation Mode State (Enabled by default as requested)
+  const [isSimulating, setIsSimulating] = useState(true);
   const [simStep, setSimStep] = useState(0);
-  const [simSpeed, setSimSpeed] = useState<number>(1800); // ms per step
+  const [simSpeed, setSimSpeed] = useState<number>(1600); // ms per step
+
+  const isSpaceAllocation = incident.category === 'SPACE_ALLOCATION' || incident.space_allocation_decision?.reallocated || incident.understanding?.resolution_type === 'SPACE_REALLOCATION';
+  const agentStages = GET_AGENT_STAGES(incident);
+
+  // Auto-start simulation whenever incident changes
+  useEffect(() => {
+    setSimStep(0);
+    setIsSimulating(true);
+  }, [incident.id]);
 
   // Sync with incident updates
   useEffect(() => {
@@ -95,13 +136,13 @@ export const AgentExecutionTracker: React.FC<AgentExecutionTrackerProps> = ({ in
     };
   }, [incident.id]);
 
-  // Simulation Timer
+  // Simulation Timer (Runs dynamically by default)
   useEffect(() => {
     let timer: any = null;
     if (isSimulating) {
       timer = setInterval(() => {
         setSimStep(prev => {
-          if (prev >= AGENT_STAGES.length - 1) {
+          if (prev >= agentStages.length - 1) {
             setIsSimulating(false);
             return prev;
           }
@@ -112,22 +153,18 @@ export const AgentExecutionTracker: React.FC<AgentExecutionTrackerProps> = ({ in
     return () => {
       if (timer) clearInterval(timer);
     };
-  }, [isSimulating, simSpeed]);
-
-  const runs: AgentRun[] = incident.runs || [];
-  const run1Events = events.filter(e => e.agent_run_id === (runs[0]?.id || 1) || (!e.agent_run_id && runs.length <= 1));
-  const run2Events = runs.length > 1 ? events.filter(e => e.agent_run_id === runs[1]?.id) : [];
+  }, [isSimulating, simSpeed, agentStages.length]);
 
   const currentStageIndex = isSimulating 
-    ? simStep 
+    ? Math.min(simStep, agentStages.length - 1)
     : incident.status === 'RESOLVED' || incident.status === 'CLOSED'
-    ? 7
+    ? agentStages.length - 1
     : incident.status === 'AWAITING_VERIFICATION'
-    ? 7
+    ? (isSpaceAllocation ? agentStages.length - 1 : 7)
     : incident.status === 'IN_PROGRESS'
-    ? 6
+    ? (isSpaceAllocation ? 4 : 6)
     : incident.status === 'SCHEDULED'
-    ? 5
+    ? (isSpaceAllocation ? 4 : 5)
     : incident.status === 'ASSIGNED'
     ? 4
     : incident.status === 'PRIORITIZED'
@@ -135,7 +172,7 @@ export const AgentExecutionTracker: React.FC<AgentExecutionTrackerProps> = ({ in
     : incident.status === 'UNDERSTOOD'
     ? 1
     : incident.status === 'REPLANNING' || (incident.replan_count > 0)
-    ? 8
+    ? (isSpaceAllocation ? 4 : 8)
     : 0;
 
   return (
@@ -158,8 +195,11 @@ export const AgentExecutionTracker: React.FC<AgentExecutionTrackerProps> = ({ in
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
           <span className="pulse-dot" style={{ backgroundColor: 'var(--color-primary)' }} />
           <div>
-            <div style={{ fontSize: '0.92rem', fontWeight: 800, color: 'var(--text-main)', fontFamily: 'var(--font-heading)' }}>
-              Autonomous 9-Agent Simulation & Live Telemetry
+            <div style={{ fontSize: '0.92rem', fontWeight: 800, color: 'var(--text-main)', fontFamily: 'var(--font-heading)', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+              <span>{isSpaceAllocation ? 'Autonomous Space Allocation Pipeline' : 'Autonomous Multi-Agent Pipeline'}</span>
+              <span className="badge badge-success" style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem', fontWeight: 800 }}>
+                ⚡ Auto-Simulating Dynamic Execution
+              </span>
             </div>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
               Active Incident #{incident.id} · Priority: <b>{incident.priority}</b> · Status: <b>{incident.status}</b>
@@ -176,20 +216,20 @@ export const AgentExecutionTracker: React.FC<AgentExecutionTrackerProps> = ({ in
               if (isSimulating) {
                 setIsSimulating(false);
               } else {
-                if (simStep >= AGENT_STAGES.length - 1) setSimStep(0);
+                if (simStep >= agentStages.length - 1) setSimStep(0);
                 setIsSimulating(true);
               }
             }}
             style={{ fontSize: '0.76rem', padding: '0.3rem 0.7rem' }}
           >
             {isSimulating ? <Pause size={13} /> : <Play size={13} />}
-            {isSimulating ? 'Pause Simulation' : 'Run Simulation'}
+            {isSimulating ? 'Pause Live Flow' : 'Replay Agent Simulation'}
           </button>
 
           <button
             type="button"
             className="btn btn-secondary btn-sm"
-            onClick={() => setSimStep(prev => (prev < AGENT_STAGES.length - 1 ? prev + 1 : 0))}
+            onClick={() => setSimStep(prev => (prev < agentStages.length - 1 ? prev + 1 : 0))}
             style={{ fontSize: '0.76rem', padding: '0.3rem 0.6rem' }}
             title="Step Forward"
           >
@@ -200,13 +240,13 @@ export const AgentExecutionTracker: React.FC<AgentExecutionTrackerProps> = ({ in
             type="button"
             className="btn btn-secondary btn-sm"
             onClick={() => {
-              setIsSimulating(false);
               setSimStep(0);
+              setIsSimulating(true);
             }}
             style={{ fontSize: '0.76rem', padding: '0.3rem 0.6rem' }}
-            title="Reset Simulation"
+            title="Restart Agent Flow"
           >
-            <RotateCcw size={13} /> Reset
+            <RotateCcw size={13} /> Restart
           </button>
 
           {events.length > 0 && (
@@ -232,13 +272,13 @@ export const AgentExecutionTracker: React.FC<AgentExecutionTrackerProps> = ({ in
             Autonomous Coordination Pipeline
           </span>
           <span className="badge badge-role mono" style={{ fontSize: '0.72rem' }}>
-            Stage {currentStageIndex + 1} of 9: {AGENT_STAGES[currentStageIndex].name}
+            Stage {currentStageIndex + 1} of {agentStages.length}: {agentStages[currentStageIndex]?.name}
           </span>
         </div>
 
-        {/* 9-Node Interactive Rail */}
+        {/* Dynamic Multi-Agent Interactive Rail */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(105px, 1fr))', gap: '0.5rem', position: 'relative' }}>
-          {AGENT_STAGES.map((st, idx) => {
+          {agentStages.map((st, idx) => {
             const isCompleted = idx < currentStageIndex;
             const isCurrent = idx === currentStageIndex;
             return (
@@ -308,57 +348,59 @@ export const AgentExecutionTracker: React.FC<AgentExecutionTrackerProps> = ({ in
 
         {/* Active Stage Detailed Simulation Card */}
         <AnimatePresence mode="wait">
-          <motion.div
-            key={currentStageIndex}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.22 }}
-            style={{
-              marginTop: '1.25rem',
-              padding: '1.15rem',
-              background: 'linear-gradient(135deg, #FFFDF9 0%, #FFF3EA 100%)',
-              borderRadius: 'var(--radius-sm)',
-              border: '1px solid var(--border-subtle)',
-              borderLeft: '4px solid var(--color-primary)'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.85rem' }}>
-              <div style={{
-                width: 42,
-                height: 42,
-                borderRadius: '8px',
-                background: 'var(--color-primary-subtle)',
-                color: 'var(--color-primary)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0
-              }}>
-                {AGENT_STAGES[currentStageIndex].icon}
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-                  <span style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-main)', fontFamily: 'var(--font-heading)' }}>
-                    {AGENT_STAGES[currentStageIndex].name}
-                  </span>
-                  <span className="badge badge-role" style={{ fontSize: '0.68rem' }}>
-                    {AGENT_STAGES[currentStageIndex].role}
-                  </span>
+          {agentStages[currentStageIndex] && (
+            <motion.div
+              key={currentStageIndex}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.22 }}
+              style={{
+                marginTop: '1.25rem',
+                padding: '1.15rem',
+                background: 'linear-gradient(135deg, #FFFDF9 0%, #FFF3EA 100%)',
+                borderRadius: 'var(--radius-sm)',
+                border: '1px solid var(--border-subtle)',
+                borderLeft: '4px solid var(--color-primary)'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.85rem' }}>
+                <div style={{
+                  width: 42,
+                  height: 42,
+                  borderRadius: '8px',
+                  background: 'var(--color-primary-subtle)',
+                  color: 'var(--color-primary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  {agentStages[currentStageIndex].icon}
                 </div>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-body)', margin: '0.2rem 0 0.5rem', lineHeight: 1.5 }}>
-                  {AGENT_STAGES[currentStageIndex].description}
-                </p>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
+                    <span style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-main)', fontFamily: 'var(--font-heading)' }}>
+                      {agentStages[currentStageIndex].name}
+                    </span>
+                    <span className="badge badge-role" style={{ fontSize: '0.68rem' }}>
+                      {agentStages[currentStageIndex].role}
+                    </span>
+                  </div>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-body)', margin: '0.2rem 0 0.5rem', lineHeight: 1.5 }}>
+                    {agentStages[currentStageIndex].description}
+                  </p>
 
-                {/* Simulation Rationale Context */}
-                <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                  <span>Location Target: <b>{incident.room_code || 'Campus Space'}</b></span>
-                  <span>Category: <b>{incident.category || 'Hardware/AV'}</b></span>
-                  <span>Assigned Tech: <b>{incident.work_order?.technician || 'Allocating...'}</b></span>
+                  {/* Simulation Rationale Context */}
+                  <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                    <span>Location Target: <b>{incident.space_allocation_decision?.reallocated_room_code ? `${incident.room_code || 'Source'} → ${incident.space_allocation_decision.reallocated_room_code}` : (incident.room_code || 'Campus Space')}</b></span>
+                    <span>Category: <b>{incident.category || 'Hardware/AV'}</b></span>
+                    <span>Workflow: <b>{isSpaceAllocation ? 'Autonomous Vacant Venue Assignment (No Tech)' : (incident.work_order?.technician ? `Assigned to ${incident.work_order.technician}` : 'Technician Dispatch Queue')}</b></span>
+                  </div>
                 </div>
               </div>
-            </div>
-          </motion.div>
+            </motion.div>
+          )}
         </AnimatePresence>
       </div>
 

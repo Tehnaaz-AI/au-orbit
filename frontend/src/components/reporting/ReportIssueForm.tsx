@@ -4,6 +4,7 @@ import { Incident, User, Room } from '../../types';
 import { api } from '../../api';
 import { MediaUploadZone } from '../media/MediaUploadZone';
 import { AudioRecorderZone } from '../media/AudioRecorderZone';
+import { AgentExecutionTracker } from '../AgentExecutionTracker';
 import { Send, CheckCircle2, ArrowRight, Sparkles, MapPin, AlertCircle, PlusCircle } from 'lucide-react';
 
 interface ReportIssueFormProps {
@@ -109,15 +110,19 @@ export const ReportIssueForm: React.FC<ReportIssueFormProps> = ({
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--status-success-text)', fontWeight: 700, fontSize: '1rem' }}>
               <CheckCircle2 size={20} />
-              <span>Incident #{submittedIncident.id} Dispatched</span>
+              <span>
+                {submittedIncident.category === 'SPACE_ALLOCATION' || submittedIncident.space_allocation_decision?.reallocated
+                  ? `Incident #${submittedIncident.id} · Autonomous Venue Allocated`
+                  : `Incident #${submittedIncident.id} Dispatched`}
+              </span>
             </div>
 
             <div style={{ background: '#FFFFFF', padding: '1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--status-success-border)' }}>
               <div style={{ fontWeight: 600, fontSize: '0.88rem', color: 'var(--text-main)', marginBottom: '0.35rem' }}>
                 "{submittedIncident.description}"
               </div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', gap: '0.75rem' }}>
-                <span>Location: <strong>{submittedIncident.room_code || 'Campus Space'}</strong></span>
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
+                <span>Reported Space: <strong>{submittedIncident.room_code || 'Campus Space'}</strong></span>
                 <span>·</span>
                 <span>Priority: <strong>{submittedIncident.priority}</strong></span>
                 <span>·</span>
@@ -125,11 +130,41 @@ export const ReportIssueForm: React.FC<ReportIssueFormProps> = ({
               </div>
             </div>
 
+            {/* AI Space Allocation Result Box */}
+            {(submittedIncident.category === 'SPACE_ALLOCATION' || submittedIncident.space_allocation_decision?.reallocated || submittedIncident.understanding?.resolution_type === 'SPACE_REALLOCATION') && (
+              <div style={{
+                background: 'linear-gradient(135deg, #FFF6EE 0%, #FFF0E6 100%)',
+                border: '1.5px solid var(--color-primary-soft)',
+                borderRadius: 'var(--radius-sm)',
+                padding: '0.85rem 1rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                  <span className="badge badge-success" style={{ fontWeight: 800, fontSize: '0.72rem' }}>
+                    🤖 AUTONOMOUS VENUE ASSIGNED
+                  </span>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>No Technician Dispatch Required</span>
+                </div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--color-primary-dark)', marginBottom: '0.25rem' }}>
+                  Assigned Room: {submittedIncident.space_allocation_decision?.allocated_room || submittedIncident.understanding?.reallocated_room_code || 'Vacant Classroom'}
+                </div>
+                <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-body)', lineHeight: 1.45 }}>
+                  {submittedIncident.resolution || submittedIncident.space_allocation_decision?.decision_reason || 'AI Space Allocation Agent verified zero schedule conflicts and assigned a vacant venue immediately.'}
+                </p>
+              </div>
+            )}
+
             <p style={{ fontSize: '0.85rem', color: 'var(--text-body)', margin: 0 }}>
-              AUOrbit multi-agent runtime has initiated contextual triage, timetable checking, and specialist scheduling.
+              {submittedIncident.category === 'SPACE_ALLOCATION' || submittedIncident.space_allocation_decision?.reallocated
+                ? 'AUOrbit autonomous runtime processed the spatial requirement and assigned the venue directly to students and faculty without manual triage.'
+                : 'AUOrbit multi-agent runtime has initiated contextual triage, timetable checking, and specialist scheduling.'}
             </p>
 
-            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
+            {/* Dynamic Step-by-Step Multi-Agent Execution Simulation */}
+            <div style={{ marginTop: '0.5rem' }}>
+              <AgentExecutionTracker incident={submittedIncident} />
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '0.75rem' }}>
               {onSelectIncident && (
                 <motion.button
                   whileHover={{ scale: 1.02 }}
@@ -142,7 +177,7 @@ export const ReportIssueForm: React.FC<ReportIssueFormProps> = ({
                   }}
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
                 >
-                  View Incident & Agent Tracker <ArrowRight size={14} />
+                  View Full Incident Workspace <ArrowRight size={14} />
                 </motion.button>
               )}
               <motion.button

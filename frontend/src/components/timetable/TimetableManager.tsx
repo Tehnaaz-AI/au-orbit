@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { TimetableItem, Room } from '../../types';
+import { TimetableItem, Room, User } from '../../types';
+import { api } from '../../api';
 import { 
   Calendar, 
   Clock, 
@@ -16,12 +17,20 @@ import {
   Radio,
   Flame,
   CheckCircle2,
-  Sparkles
+  Sparkles,
+  PlusCircle,
+  Edit3,
+  Trash2,
+  X
 } from 'lucide-react';
 
 interface TimetableManagerProps {
   timetable: TimetableItem[];
   rooms: Room[];
+  currentUser?: User;
+  onRefresh?: () => void;
+  onError?: (msg: string) => void;
+  onSuccess?: (msg: string) => void;
   title?: string;
   subtitle?: string;
 }
@@ -29,6 +38,10 @@ interface TimetableManagerProps {
 export const TimetableManager: React.FC<TimetableManagerProps> = ({
   timetable,
   rooms,
+  currentUser,
+  onRefresh,
+  onError,
+  onSuccess,
   title = 'Academic Timetable & Classroom Schedules',
   subtitle = 'Contextual instructional schedules mapped to campus spaces to dynamically escalate incident priorities and prevent teaching disruptions.'
 }) => {
@@ -39,6 +52,8 @@ export const TimetableManager: React.FC<TimetableManagerProps> = ({
       roomBlockMap[r.code.toUpperCase()] = r.block.toUpperCase();
     }
   });
+
+  const roomMap = useMemo(() => Object.fromEntries(rooms.map(r => [r.code, r])), [rooms]);
 
   const getBlockForRoom = (roomCode: string): string => {
     if (!roomCode) return 'Campus';
@@ -121,6 +136,49 @@ export const TimetableManager: React.FC<TimetableManagerProps> = ({
     groupedByDay[d] = filtered.filter(item => item.day?.toLowerCase() === d.toLowerCase());
   });
 
+  const canManageTimetable = currentUser && ['SUPER_ADMIN', 'ADMIN', 'UNIVERSITY_ADMIN'].includes(currentUser.role);
+  const [inspectedItem, setInspectedItem] = useState<TimetableItem | null>(null);
+  const [editingItem, setEditingItem] = useState<Partial<TimetableItem> | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  async function handleSaveSession(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingItem) return;
+    setIsSaving(true);
+    try {
+      if (editingItem.id) {
+        await api.updateTimetableEntry(editingItem.id, editingItem);
+        if (onSuccess) onSuccess(`Timetable entry for ${editingItem.subject} updated successfully.`);
+      } else {
+        await api.createTimetableEntry(editingItem);
+        if (onSuccess) onSuccess(`New timetable entry for ${editingItem.subject} created successfully.`);
+      }
+      setEditingItem(null);
+      setInspectedItem(null);
+      if (onRefresh) onRefresh();
+    } catch (err: any) {
+      if (onError) onError(err.message || 'Failed to save timetable entry');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleDeleteSession(id: number) {
+    if (!window.confirm('Are you sure you want to remove this timetable entry?')) return;
+    setIsSaving(true);
+    try {
+      await api.deleteTimetableEntry(id);
+      if (onSuccess) onSuccess('Timetable session removed.');
+      setInspectedItem(null);
+      setEditingItem(null);
+      if (onRefresh) onRefresh();
+    } catch (err: any) {
+      if (onError) onError(err.message || 'Failed to delete timetable entry');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
@@ -141,32 +199,58 @@ export const TimetableManager: React.FC<TimetableManagerProps> = ({
           </p>
         </div>
 
-        {/* View Mode Switcher */}
-        <div style={{ display: 'flex', background: 'var(--bg-surface)', padding: '0.2rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)', gap: '0.2rem' }}>
-          <button
-            type="button"
-            className={`btn btn-sm ${viewMode === 'cards' ? 'btn-primary' : 'btn-ghost'}`}
-            onClick={() => setViewMode('cards')}
-            style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}
-          >
-            <ListFilter size={13} /> Session Cards
-          </button>
-          <button
-            type="button"
-            className={`btn btn-sm ${viewMode === 'day_matrix' ? 'btn-primary' : 'btn-ghost'}`}
-            onClick={() => setViewMode('day_matrix')}
-            style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}
-          >
-            <Grid size={13} /> Day Matrix
-          </button>
-          <button
-            type="button"
-            className={`btn btn-sm ${viewMode === 'timeline' ? 'btn-primary' : 'btn-ghost'}`}
-            onClick={() => setViewMode('timeline')}
-            style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}
-          >
-            <Clock size={13} /> Period Timeline
-          </button>
+        {/* View Mode Switcher & Admin Action */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+          {canManageTimetable && (
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={() => setEditingItem({
+                subject: '',
+                faculty: '',
+                room_code: rooms[0]?.code || 'I-302',
+                branch: 'AI',
+                academic_year: '2026-27',
+                semester: 'II-I',
+                section: 'A',
+                day: 'Monday',
+                period: 1,
+                start_time: '09:00',
+                end_time: '09:55',
+                activity_type: 'LECTURE'
+              })}
+              style={{ fontSize: '0.76rem', padding: '0.3rem 0.65rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+            >
+              <PlusCircle size={13} /> Add Session
+            </button>
+          )}
+
+          <div style={{ display: 'flex', background: 'var(--bg-surface)', padding: '0.2rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)', gap: '0.2rem' }}>
+            <button
+              type="button"
+              className={`btn btn-sm ${viewMode === 'cards' ? 'btn-primary' : 'btn-ghost'}`}
+              onClick={() => setViewMode('cards')}
+              style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}
+            >
+              <ListFilter size={13} /> Session Cards
+            </button>
+            <button
+              type="button"
+              className={`btn btn-sm ${viewMode === 'day_matrix' ? 'btn-primary' : 'btn-ghost'}`}
+              onClick={() => setViewMode('day_matrix')}
+              style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}
+            >
+              <Grid size={13} /> Day Matrix
+            </button>
+            <button
+              type="button"
+              className={`btn btn-sm ${viewMode === 'timeline' ? 'btn-primary' : 'btn-ghost'}`}
+              onClick={() => setViewMode('timeline')}
+              style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}
+            >
+              <Clock size={13} /> Period Timeline
+            </button>
+          </div>
         </div>
       </div>
 
@@ -375,6 +459,7 @@ export const TimetableManager: React.FC<TimetableManagerProps> = ({
                   <motion.div
                     key={item.id}
                     whileHover={{ y: -2 }}
+                    onClick={() => setInspectedItem(item)}
                     className="card card-interactive"
                     style={{
                       padding: '1rem',
@@ -382,7 +467,8 @@ export const TimetableManager: React.FC<TimetableManagerProps> = ({
                       flexDirection: 'column',
                       gap: '0.55rem',
                       borderLeft: active ? '4px solid #C84B31' : '4px solid var(--color-primary)',
-                      background: active ? 'var(--color-primary-subtle)' : 'var(--bg-card)'
+                      background: active ? 'var(--color-primary-subtle)' : 'var(--bg-card)',
+                      cursor: 'pointer'
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -454,7 +540,19 @@ export const TimetableManager: React.FC<TimetableManagerProps> = ({
                 ) : (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '0.65rem' }}>
                     {dayItems.map(item => (
-                      <div key={item.id} style={{ background: 'var(--bg-surface)', padding: '0.65rem 0.85rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)', borderLeft: '3px solid var(--color-primary)' }}>
+                      <div 
+                        key={item.id} 
+                        onClick={() => setInspectedItem(item)}
+                        className="card-interactive"
+                        style={{ 
+                          background: 'var(--bg-surface)', 
+                          padding: '0.65rem 0.85rem', 
+                          borderRadius: 'var(--radius-sm)', 
+                          border: '1px solid var(--border-subtle)', 
+                          borderLeft: '3px solid var(--color-primary)',
+                          cursor: 'pointer' 
+                        }}
+                      >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.2rem' }}>
                           <span style={{ fontWeight: 800, fontSize: '0.88rem', color: 'var(--color-primary)', fontFamily: 'var(--font-heading)' }}>{item.room_code}</span>
                           <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{item.start_time}-{item.end_time}</span>
@@ -511,12 +609,15 @@ export const TimetableManager: React.FC<TimetableManagerProps> = ({
                       periodItems.map(item => (
                         <div 
                           key={item.id}
+                          onClick={() => setInspectedItem(item)}
+                          className="card-interactive"
                           style={{
                             background: 'var(--bg-card)',
                             padding: '0.4rem 0.65rem',
                             borderRadius: 'var(--radius-xs)',
                             border: '1px solid var(--border-default)',
-                            fontSize: '0.78rem'
+                            fontSize: '0.78rem',
+                            cursor: 'pointer'
                           }}
                         >
                           <span style={{ fontWeight: 800, color: 'var(--color-primary)', marginRight: '0.35rem' }}>{item.room_code}</span>
@@ -530,6 +631,372 @@ export const TimetableManager: React.FC<TimetableManagerProps> = ({
               );
             })}
           </div>
+        </div>
+      )}
+
+      {/* --- Detail Inspection Modal --- */}
+      {inspectedItem && (
+        <div 
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.7)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '1rem'
+          }}
+          onClick={() => setInspectedItem(null)}
+        >
+          <motion.div 
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="card"
+            style={{
+              maxWidth: '560px',
+              width: '100%',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border-default)',
+              boxShadow: 'var(--shadow-xl)',
+              padding: '1.5rem',
+              borderRadius: 'var(--radius-lg)'
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.75rem' }}>
+              <div>
+                <span className="badge badge-primary" style={{ marginBottom: '0.35rem' }}>
+                  {inspectedItem.branch} · Section {inspectedItem.section || 'A'}
+                </span>
+                <h3 style={{ fontSize: '1.25rem', color: 'var(--text-main)', margin: 0, fontFamily: 'var(--font-heading)' }}>
+                  {inspectedItem.subject}
+                </h3>
+              </div>
+              <button 
+                type="button" 
+                className="btn btn-ghost btn-sm"
+                onClick={() => setInspectedItem(null)}
+                style={{ padding: '0.2rem' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '1.25rem' }}>
+              <div style={{ background: 'var(--bg-surface)', padding: '0.75rem', borderRadius: 'var(--radius-sm)' }}>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Venue & Block</div>
+                <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--color-primary-dark)', marginTop: '0.2rem' }}>
+                  {inspectedItem.room_code}
+                </div>
+                <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                  Block {getBlockForRoom(inspectedItem.room_code)} · {roomMap[inspectedItem.room_code]?.kind || 'Classroom'}
+                </div>
+              </div>
+
+              <div style={{ background: 'var(--bg-surface)', padding: '0.75rem', borderRadius: 'var(--radius-sm)' }}>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Instructor / Faculty</div>
+                <div style={{ fontSize: '0.96rem', fontWeight: 700, color: 'var(--text-main)', marginTop: '0.2rem' }}>
+                  {inspectedItem.faculty || 'Unassigned'}
+                </div>
+                <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                  {inspectedItem.branch} Department
+                </div>
+              </div>
+
+              <div style={{ background: 'var(--bg-surface)', padding: '0.75rem', borderRadius: 'var(--radius-sm)' }}>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Schedule & Timing</div>
+                <div style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-main)', marginTop: '0.2rem' }}>
+                  {inspectedItem.day}, {inspectedItem.start_time} - {inspectedItem.end_time}
+                </div>
+                <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                  Period {inspectedItem.period || 1}
+                </div>
+              </div>
+
+              <div style={{ background: 'var(--bg-surface)', padding: '0.75rem', borderRadius: 'var(--radius-sm)' }}>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Academic Details</div>
+                <div style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-main)', marginTop: '0.2rem' }}>
+                  Sem {inspectedItem.semester || 'II-I'}
+                </div>
+                <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                  Year {inspectedItem.academic_year || '2026-27'} · {inspectedItem.activity_type || 'LECTURE'}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '0.75rem' }}>
+              {canManageTimetable && (
+                <>
+                  <button
+                    type="button"
+                    className="btn btn-danger btn-sm"
+                    disabled={isSaving}
+                    onClick={() => handleDeleteSession(inspectedItem.id)}
+                    style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                  >
+                    <Trash2 size={13} /> Delete Session
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    disabled={isSaving}
+                    onClick={() => {
+                      setEditingItem({ ...inspectedItem });
+                      setInspectedItem(null);
+                    }}
+                    style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                  >
+                    <Edit3 size={13} /> Edit Session
+                  </button>
+                </>
+              )}
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={() => setInspectedItem(null)}
+                style={{ fontSize: '0.8rem' }}
+              >
+                Close
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* --- Add / Edit Session Modal --- */}
+      {editingItem && (
+        <div 
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            padding: '1rem'
+          }}
+          onClick={() => setEditingItem(null)}
+        >
+          <motion.div 
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="card"
+            style={{
+              maxWidth: '620px',
+              width: '100%',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border-default)',
+              boxShadow: 'var(--shadow-xl)',
+              padding: '1.5rem',
+              borderRadius: 'var(--radius-lg)',
+              maxHeight: '90vh',
+              overflowY: 'auto'
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.75rem' }}>
+              <h3 style={{ fontSize: '1.2rem', color: 'var(--text-main)', margin: 0, fontFamily: 'var(--font-heading)' }}>
+                {editingItem.id ? 'Edit Timetable Session' : 'Add New Timetable Session'}
+              </h3>
+              <button 
+                type="button" 
+                className="btn btn-ghost btn-sm"
+                onClick={() => setEditingItem(null)}
+                style={{ padding: '0.2rem' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form 
+              onSubmit={handleSaveSession}
+              style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}
+            >
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' }}>
+                <div>
+                  <label className="form-label" style={{ fontSize: '0.78rem' }}>Subject Name *</label>
+                  <input
+                    type="text"
+                    required
+                    className="form-input"
+                    value={editingItem.subject || ''}
+                    onChange={e => setEditingItem({ ...editingItem, subject: e.target.value })}
+                    placeholder="e.g. Deep Learning Lab"
+                    style={{ fontSize: '0.85rem' }}
+                  />
+                </div>
+                <div>
+                  <label className="form-label" style={{ fontSize: '0.78rem' }}>Faculty / Instructor *</label>
+                  <input
+                    type="text"
+                    required
+                    className="form-input"
+                    value={editingItem.faculty || ''}
+                    onChange={e => setEditingItem({ ...editingItem, faculty: e.target.value })}
+                    placeholder="e.g. Dr. Rajesh Sharma"
+                    style={{ fontSize: '0.85rem' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+                <div>
+                  <label className="form-label" style={{ fontSize: '0.78rem' }}>Room / Venue *</label>
+                  <select
+                    className="form-select"
+                    value={editingItem.room_code || ''}
+                    onChange={e => setEditingItem({ ...editingItem, room_code: e.target.value })}
+                    style={{ fontSize: '0.85rem' }}
+                  >
+                    {rooms.map(r => (
+                      <option key={r.code} value={r.code}>{r.code} ({r.kind || 'Room'} · Block {getBlockForRoom(r.code)})</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="form-label" style={{ fontSize: '0.78rem' }}>Branch *</label>
+                  <input
+                    type="text"
+                    required
+                    className="form-input"
+                    value={editingItem.branch || ''}
+                    onChange={e => setEditingItem({ ...editingItem, branch: e.target.value })}
+                    placeholder="AI, CSE, ECE..."
+                    style={{ fontSize: '0.85rem' }}
+                  />
+                </div>
+                <div>
+                  <label className="form-label" style={{ fontSize: '0.78rem' }}>Section *</label>
+                  <input
+                    type="text"
+                    required
+                    className="form-input"
+                    value={editingItem.section || ''}
+                    onChange={e => setEditingItem({ ...editingItem, section: e.target.value })}
+                    placeholder="A, B, C..."
+                    style={{ fontSize: '0.85rem' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+                <div>
+                  <label className="form-label" style={{ fontSize: '0.78rem' }}>Day of Week *</label>
+                  <select
+                    className="form-select"
+                    value={editingItem.day || 'Monday'}
+                    onChange={e => setEditingItem({ ...editingItem, day: e.target.value })}
+                    style={{ fontSize: '0.85rem' }}
+                  >
+                    {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map(d => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="form-label" style={{ fontSize: '0.78rem' }}>Period (1-8) *</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={8}
+                    required
+                    className="form-input"
+                    value={editingItem.period || 1}
+                    onChange={e => setEditingItem({ ...editingItem, period: parseInt(e.target.value) || 1 })}
+                    style={{ fontSize: '0.85rem' }}
+                  />
+                </div>
+                <div>
+                  <label className="form-label" style={{ fontSize: '0.78rem' }}>Activity Type</label>
+                  <select
+                    className="form-select"
+                    value={editingItem.activity_type || 'LECTURE'}
+                    onChange={e => setEditingItem({ ...editingItem, activity_type: e.target.value })}
+                    style={{ fontSize: '0.85rem' }}
+                  >
+                    <option value="LECTURE">Lecture</option>
+                    <option value="LAB">Lab Session</option>
+                    <option value="TUTORIAL">Tutorial</option>
+                    <option value="SEMINAR">Seminar</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' }}>
+                <div>
+                  <label className="form-label" style={{ fontSize: '0.78rem' }}>Start Time (HH:MM) *</label>
+                  <input
+                    type="text"
+                    required
+                    className="form-input"
+                    value={editingItem.start_time || ''}
+                    onChange={e => setEditingItem({ ...editingItem, start_time: e.target.value })}
+                    placeholder="09:00"
+                    style={{ fontSize: '0.85rem' }}
+                  />
+                </div>
+                <div>
+                  <label className="form-label" style={{ fontSize: '0.78rem' }}>End Time (HH:MM) *</label>
+                  <input
+                    type="text"
+                    required
+                    className="form-input"
+                    value={editingItem.end_time || ''}
+                    onChange={e => setEditingItem({ ...editingItem, end_time: e.target.value })}
+                    placeholder="09:55"
+                    style={{ fontSize: '0.85rem' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' }}>
+                <div>
+                  <label className="form-label" style={{ fontSize: '0.78rem' }}>Academic Year</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={editingItem.academic_year || '2026-27'}
+                    onChange={e => setEditingItem({ ...editingItem, academic_year: e.target.value })}
+                    style={{ fontSize: '0.85rem' }}
+                  />
+                </div>
+                <div>
+                  <label className="form-label" style={{ fontSize: '0.78rem' }}>Semester</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={editingItem.semester || 'II-I'}
+                    onChange={e => setEditingItem({ ...editingItem, semester: e.target.value })}
+                    style={{ fontSize: '0.85rem' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.5rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '0.75rem' }}>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => setEditingItem(null)}
+                  disabled={isSaving}
+                  style={{ fontSize: '0.82rem' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary btn-sm"
+                  disabled={isSaving}
+                  style={{ fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                >
+                  <CheckCircle2 size={14} /> {isSaving ? 'Saving...' : 'Save Timetable Session'}
+                </button>
+              </div>
+            </form>
+          </motion.div>
         </div>
       )}
 

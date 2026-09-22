@@ -49,10 +49,14 @@ export const CampusHierarchyExplorer: React.FC<CampusHierarchyExplorerProps> = (
   const blockRooms = rooms.filter(r => r.block === selectedBlock);
   const floors = Array.from(new Set(blockRooms.map(r => r.floor))).sort((a, b) => a - b);
   const [selectedFloor, setSelectedFloor] = useState<number | 'ALL'>('ALL');
+  const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
+  const [selectedKind, setSelectedKind] = useState<string>('ALL');
 
-  // Filter rooms on current block + floor + search
+  // Filter rooms on current block + floor + status + kind + search
   const displayedRooms = blockRooms.filter(r => {
     if (selectedFloor !== 'ALL' && r.floor !== selectedFloor) return false;
+    if (selectedStatus !== 'ALL' && (r.availability || 'AVAILABLE') !== selectedStatus) return false;
+    if (selectedKind !== 'ALL' && r.kind !== selectedKind) return false;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       return r.code.toLowerCase().includes(q) || r.kind.toLowerCase().includes(q) || (r.department && r.department.toLowerCase().includes(q));
@@ -74,6 +78,8 @@ export const CampusHierarchyExplorer: React.FC<CampusHierarchyExplorerProps> = (
       setUpdatingRoom(null);
     }
   }
+
+  const [inspectedRoom, setInspectedRoom] = useState<Room | null>(null);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -98,24 +104,26 @@ export const CampusHierarchyExplorer: React.FC<CampusHierarchyExplorerProps> = (
             const count = rooms.filter(r => r.block === b).length;
             const isSelected = selectedBlock === b;
             return (
-              <motion.div
+              <motion.button
                 key={b}
                 whileHover={{ y: -2 }}
                 whileTap={{ scale: 0.98 }}
+                type="button"
                 onClick={() => {
-                  setSelectedBlock(b);
+                  setSelectedBlock(b || 'I');
                   setSelectedFloor('ALL');
                 }}
                 className={`card ${isSelected ? 'card-interactive' : ''}`}
                 style={{
                   padding: '0.85rem 1rem',
                   cursor: 'pointer',
-                  borderColor: isSelected ? 'var(--primary-dark)' : 'var(--border-subtle)',
+                  border: isSelected ? '1px solid var(--primary-dark)' : '1px solid var(--border-subtle)',
+                  borderLeft: isSelected ? '4px solid var(--primary-dark)' : '4px solid var(--border-subtle)',
                   background: isSelected ? 'var(--color-primary-subtle)' : 'var(--bg-card)',
+                  textAlign: 'left',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'space-between',
-                  boxShadow: isSelected ? 'var(--shadow-md)' : 'var(--shadow-sm)'
+                  justifyContent: 'space-between'
                 }}
               >
                 <div>
@@ -123,64 +131,103 @@ export const CampusHierarchyExplorer: React.FC<CampusHierarchyExplorerProps> = (
                     Block {b}
                   </div>
                   <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                    {count} configured spaces
+                    {count} Instructional Venues
                   </div>
                 </div>
-                <Building2 size={20} color={isSelected ? 'var(--primary-dark)' : 'var(--text-dim)'} />
-              </motion.div>
+                <Building2 size={18} color={isSelected ? 'var(--primary-dark)' : 'var(--text-dim)'} />
+              </motion.button>
             );
           })}
         </div>
       </div>
 
-      {/* 2. STEP 2: Floor Level Tabs & Search */}
+      {/* 2. STEP 2: Floor & Availability Status Filter Controls */}
       <div style={{ 
         display: 'flex', 
         alignItems: 'center', 
         justifyContent: 'space-between', 
         flexWrap: 'wrap', 
         gap: '0.75rem',
-        padding: '0.75rem 1rem',
+        padding: '0.85rem 1rem',
         background: 'var(--bg-card)',
         borderRadius: 'var(--radius-md)',
         border: '1px solid var(--border-subtle)'
       }}>
-        {/* Floor Pills */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem', marginRight: '0.25rem' }}>
-            <Layers size={13} /> Floor:
-          </span>
-          <button
-            type="button"
-            className={`btn btn-sm ${selectedFloor === 'ALL' ? 'btn-primary' : 'btn-secondary'}`}
-            onClick={() => setSelectedFloor('ALL')}
-            style={{ fontSize: '0.75rem', padding: '0.2rem 0.55rem' }}
-          >
-            All Floors
-          </button>
-          {floors.map(f => (
+        {/* Floor, Status & Kind Pills */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+          
+          {/* Floor selector */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+            <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Floor:</span>
             <button
-              key={f}
               type="button"
-              className={`btn btn-sm ${selectedFloor === f ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={() => setSelectedFloor(f)}
-              style={{ fontSize: '0.75rem', padding: '0.2rem 0.55rem' }}
+              className={`btn btn-sm ${selectedFloor === 'ALL' ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setSelectedFloor('ALL')}
+              style={{ fontSize: '0.72rem', padding: '0.15rem 0.5rem' }}
             >
-              Floor {f}
+              All
             </button>
-          ))}
+            {floors.map(f => (
+              <button
+                key={f}
+                type="button"
+                className={`btn btn-sm ${selectedFloor === f ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setSelectedFloor(f)}
+                style={{ fontSize: '0.72rem', padding: '0.15rem 0.5rem' }}
+              >
+                F{f}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ width: 1, height: 18, background: 'var(--border-subtle)' }} />
+
+          {/* Status selector */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+            <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Status:</span>
+            {['ALL', 'AVAILABLE', 'OCCUPIED', 'MAINTENANCE'].map(st => (
+              <button
+                key={st}
+                type="button"
+                className={`btn btn-sm ${selectedStatus === st ? 'btn-primary' : 'btn-ghost'}`}
+                onClick={() => setSelectedStatus(st)}
+                style={{ fontSize: '0.72rem', padding: '0.15rem 0.5rem' }}
+              >
+                {st === 'ALL' ? 'All Status' : st}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ width: 1, height: 18, background: 'var(--border-subtle)' }} />
+
+          {/* Room Kind selector */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+            <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Kind:</span>
+            {['ALL', 'CLASSROOM', 'LAB', 'SEMINAR_HALL'].map(kd => (
+              <button
+                key={kd}
+                type="button"
+                className={`btn btn-sm ${selectedKind === kd ? 'btn-primary' : 'btn-ghost'}`}
+                onClick={() => setSelectedKind(kd)}
+                style={{ fontSize: '0.72rem', padding: '0.15rem 0.5rem' }}
+              >
+                {kd === 'ALL' ? 'All' : kd === 'CLASSROOM' ? 'Classrooms' : kd === 'LAB' ? 'Labs' : 'Seminar'}
+              </button>
+            ))}
+          </div>
+
         </div>
 
-        {/* Space Search */}
-        <div style={{ position: 'relative', flex: '1 1 200px', maxWidth: '300px' }}>
-          <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+        {/* Room Search in Block */}
+        <div style={{ position: 'relative', width: '200px' }}>
+          <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
           <input
             type="text"
             className="form-input"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            placeholder={`Search spaces in Block ${selectedBlock}...`}
-            style={{ paddingLeft: '1.85rem', height: '32px', fontSize: '0.8rem' }}
+            placeholder={`Search Block ${selectedBlock}...`}
+            style={{ paddingLeft: '1.85rem', height: '30px', fontSize: '0.78rem' }}
           />
         </div>
       </div>
@@ -191,7 +238,7 @@ export const CampusHierarchyExplorer: React.FC<CampusHierarchyExplorerProps> = (
           <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
             Spaces on {selectedFloor === 'ALL' ? `Block ${selectedBlock} (All Floors)` : `Block ${selectedBlock} - Floor ${selectedFloor}`} ({displayedRooms.length})
           </span>
-          <span className="mono" style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>Contained Scroll Deck</span>
+          <span className="mono" style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>Click any space to inspect details</span>
         </div>
 
         {displayedRooms.length === 0 ? (
@@ -209,11 +256,14 @@ export const CampusHierarchyExplorer: React.FC<CampusHierarchyExplorerProps> = (
                 <motion.div
                   key={room.code}
                   whileHover={{ y: -3, transition: { duration: 0.15 } }}
-                  onClick={() => onSelectRoom && onSelectRoom(room)}
+                  onClick={() => {
+                    setInspectedRoom(room);
+                    if (onSelectRoom) onSelectRoom(room);
+                  }}
                   className="card card-interactive"
                   style={{
                     padding: '0.95rem 1.1rem',
-                    cursor: onSelectRoom ? 'pointer' : 'default',
+                    cursor: 'pointer',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '0.5rem'
@@ -281,6 +331,108 @@ export const CampusHierarchyExplorer: React.FC<CampusHierarchyExplorerProps> = (
           </div>
         )}
       </div>
+
+      {/* Interactive Room Detail Modal */}
+      {inspectedRoom && (
+        <div className="modal-overlay" onClick={() => setInspectedRoom(null)}>
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.96 }}
+            className="modal-content" 
+            onClick={e => e.stopPropagation()}
+            style={{ maxWidth: '640px' }}
+          >
+            <div className="modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <Building2 size={22} color="var(--color-primary)" />
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--text-main)', fontFamily: 'var(--font-heading)' }}>
+                    Venue Details: Room {inspectedRoom.code}
+                  </h3>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                    Block {inspectedRoom.block} · Floor {inspectedRoom.floor} · {inspectedRoom.kind}
+                  </div>
+                </div>
+              </div>
+              <button type="button" className="btn-ghost btn-sm" onClick={() => setInspectedRoom(null)}>
+                ✕
+              </button>
+            </div>
+
+            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {/* Space Overview Info Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
+                <div style={{ background: 'var(--bg-surface)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Operational State</div>
+                  <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-main)', marginTop: '0.2rem' }}>
+                    <span className={`badge ${inspectedRoom.availability === 'AVAILABLE' ? 'badge-success' : 'badge-warning'}`}>
+                      {inspectedRoom.availability}
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ background: 'var(--bg-surface)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Space Type</div>
+                  <div style={{ fontWeight: 800, fontSize: '0.92rem', color: 'var(--text-main)', marginTop: '0.2rem' }}>
+                    {inspectedRoom.kind}
+                  </div>
+                </div>
+
+                <div style={{ background: 'var(--bg-surface)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Assigned Unit</div>
+                  <div style={{ fontWeight: 800, fontSize: '0.92rem', color: 'var(--text-main)', marginTop: '0.2rem' }}>
+                    {inspectedRoom.department || 'General Academic'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Installed Equipment Catalog */}
+              <div>
+                <div style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.45rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Wrench size={14} color="var(--color-primary)" />
+                  Installed Equipment & Infrastructure ({equipment.filter(e => e.room_code === inspectedRoom.code).length})
+                </div>
+
+                {equipment.filter(e => e.room_code === inspectedRoom.code).length === 0 ? (
+                  <div style={{ padding: '1rem', background: 'var(--bg-surface)', borderRadius: 'var(--radius-sm)', color: 'var(--text-muted)', fontSize: '0.82rem', textAlign: 'center' }}>
+                    No specific hardware assets mapped to this space.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    {equipment.filter(e => e.room_code === inspectedRoom.code).map(eq => (
+                      <div 
+                        key={eq.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '0.55rem 0.85rem',
+                          background: 'var(--bg-surface)',
+                          borderRadius: 'var(--radius-sm)',
+                          border: '1px solid var(--border-subtle)',
+                          fontSize: '0.82rem'
+                        }}
+                      >
+                        <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{eq.name}</span>
+                        <span className={`badge ${eq.status === 'WORKING' ? 'badge-success' : eq.status === 'FAULT' ? 'badge-danger' : 'badge-warning'}`}>
+                          {eq.status}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setInspectedRoom(null)}>
+                Close
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };

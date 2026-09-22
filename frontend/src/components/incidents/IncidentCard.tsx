@@ -93,6 +93,34 @@ export const IncidentCard: React.FC<IncidentCardProps> = ({
         {incident.description}
       </div>
 
+      {/* Autonomous Space Allocation / Assigned Venue Card */}
+      {(incident.category === 'SPACE_ALLOCATION' || incident.space_allocation_decision?.reallocated || incident.understanding?.resolution_type === 'SPACE_REALLOCATION') && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '0.45rem',
+          padding: '0.5rem 0.75rem',
+          background: 'linear-gradient(135deg, rgba(227, 83, 54, 0.08) 0%, rgba(245, 245, 220, 0.4) 100%)',
+          border: '1px solid var(--color-primary-soft)',
+          borderRadius: 'var(--radius-sm)',
+          fontSize: '0.8rem'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+            <span className="badge badge-success" style={{ fontSize: '0.68rem', padding: '0.15rem 0.45rem', fontWeight: 800 }}>
+              🤖 AI ASSIGNED VENUE
+            </span>
+            <span style={{ color: 'var(--color-primary-dark)', fontWeight: 700 }}>
+              {incident.space_allocation_decision?.allocated_room || incident.understanding?.reallocated_room_code || 'Vacant Classroom'}
+            </span>
+          </div>
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+            Autonomously resolved without technician
+          </span>
+        </div>
+      )}
+
       {/* Reported Audio Voice Note Player */}
       {incident.media_urls && incident.media_urls.some(u => u.startsWith('data:audio') || u.endsWith('.mp3') || u.endsWith('.wav') || u.endsWith('.ogg') || u.endsWith('.m4a') || u.endsWith('.webm')) && (
         <div 

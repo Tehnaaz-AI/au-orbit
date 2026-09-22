@@ -292,24 +292,25 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
                   </p>
                 </div>
 
-                {/* Reporter Identity & Metadata Block */}
+                {/* Full Reporter Identity & Audit Metadata Block (Accessible to Ops Head & Admins) */}
                 <div style={{ 
                   display: 'flex', 
-                  alignItems: 'center', 
+                  alignItems: 'flex-start', 
                   justifyContent: 'space-between', 
                   flexWrap: 'wrap', 
-                  gap: '0.65rem',
-                  paddingTop: '0.65rem',
+                  gap: '0.85rem',
+                  paddingTop: '0.85rem',
                   borderTop: '1px solid var(--border-subtle)',
-                  fontSize: '0.8rem',
+                  fontSize: '0.82rem',
                   background: '#FFFFFF',
-                  padding: '0.65rem 0.85rem',
-                  borderRadius: 'var(--radius-sm)'
+                  padding: '0.85rem 1rem',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--border-subtle)'
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem' }}>
                     <div style={{
-                      width: 28,
-                      height: 28,
+                      width: 36,
+                      height: 36,
                       borderRadius: '50%',
                       background: 'var(--color-primary-subtle)',
                       color: 'var(--color-primary-dark)',
@@ -317,30 +318,93 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
                       alignItems: 'center',
                       justifyContent: 'center',
                       fontWeight: 800,
-                      fontSize: '0.76rem'
+                      fontSize: '0.85rem',
+                      flexShrink: 0
                     }}>
-                      {incident.reporter ? incident.reporter.charAt(0).toUpperCase() : 'U'}
+                      {(incident.reporter_name || incident.reporter || 'U').charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <div style={{ fontWeight: 700, color: 'var(--text-main)' }}>
-                        Reported By: {incident.reporter}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '0.9rem' }}>
+                          {incident.reporter_name || incident.reporter}
+                        </span>
+                        <span className="badge badge-role" style={{ fontSize: '0.68rem', padding: '0.15rem 0.45rem' }}>
+                          {incident.reporter_role || (incident.reporter.toLowerCase().includes('prof') ? 'FACULTY' : 'STUDENT')}
+                        </span>
                       </div>
-                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                        Origin Channel: Verified AUOrbit Web Intake & Voice Channel
+                      
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.2rem', display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+                        <span>Email: <strong style={{ color: 'var(--text-body)' }}>{incident.reporter_email || (incident.reporter.match(/[\w.-]+@[\w.-]+/)?.[0] || 'student@anurag.edu.in')}</strong></span>
+                        {incident.reporter_department && <span>Department: <strong style={{ color: 'var(--text-body)' }}>{incident.reporter_department}</strong></span>}
+                        {incident.reporter_phone && <span>Phone / Extension: <strong style={{ color: 'var(--text-body)' }}>{incident.reporter_phone}</strong></span>}
                       </div>
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <span className="badge badge-neutral" style={{ fontSize: '0.72rem' }}>
-                      Location: {incident.room_code || 'General Space'}
-                    </span>
-                    <span className="badge badge-info" style={{ fontSize: '0.72rem' }}>
-                      Ticket #{incident.id}
-                    </span>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.35rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <span className="badge badge-neutral" style={{ fontSize: '0.72rem' }}>
+                        Venue: {incident.room_code || 'General Campus'}
+                      </span>
+                      <span className="badge badge-info" style={{ fontSize: '0.72rem' }}>
+                        Ticket #{incident.id}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '0.74rem', color: 'var(--text-dim)', textAlign: 'right' }}>
+                      Timestamp: <b>{new Date(incident.created_at).toLocaleString()}</b>
+                    </div>
                   </div>
                 </div>
               </div>
+
+              {/* Dynamic Autonomous Space Reallocation Banner */}
+              {(incident.category === 'SPACE_ALLOCATION' || incident.space_allocation_decision?.reallocated || incident.understanding?.resolution_type === 'SPACE_REALLOCATION') && (
+                <div style={{
+                  background: 'linear-gradient(135deg, #FFF6EE 0%, #FFF0E6 100%)',
+                  border: '1.5px solid var(--color-primary-soft)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '1.25rem',
+                  boxShadow: '0 4px 14px rgba(227, 83, 54, 0.08)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span className="badge badge-success" style={{ padding: '0.25rem 0.6rem', fontSize: '0.76rem', fontWeight: 800 }}>
+                        <CheckCircle size={13} style={{ marginRight: 3 }} /> AUTONOMOUS SPACE REALLOCATION
+                      </span>
+                      <span style={{ fontSize: '0.78rem', color: 'var(--color-primary-dark)', fontWeight: 700 }}>
+                        Zero Technician Dispatch Needed
+                      </span>
+                    </div>
+                    <span className="badge badge-neutral" style={{ fontSize: '0.74rem' }}>
+                      Live Timetable Verified
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem', marginBottom: '0.85rem' }}>
+                    <div style={{ background: '#FFFFFF', padding: '0.75rem 0.9rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Source Space</div>
+                      <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--color-primary-dark)' }}>
+                        {incident.room_code || 'Source Room'} (Congested)
+                      </div>
+                    </div>
+
+                    <div style={{ background: '#FFFFFF', padding: '0.75rem 0.9rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-primary-soft)' }}>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--color-primary-dark)', fontWeight: 700, textTransform: 'uppercase' }}>Assigned Vacant Room</div>
+                      <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--color-primary)' }}>
+                        {incident.space_allocation_decision?.allocated_room || incident.understanding?.reallocated_room_code || 'Allocated Vacant Venue'}
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                        {incident.space_allocation_decision?.allocated_room_kind || 'Classroom / Seminar Hall'}
+                      </div>
+                    </div>
+                  </div>
+
+                  <p style={{ margin: 0, fontSize: '0.86rem', color: 'var(--text-main)', lineHeight: 1.55 }}>
+                    <strong>Agent Decision: </strong>
+                    {incident.resolution || incident.space_allocation_decision?.decision_reason || 'Autonomous agent verified conflict-free vacancy in live university timetable and reallocated academic session.'}
+                  </p>
+                </div>
+              )}
 
               {/* Problem Attachments (Photos/Videos) */}
               {initialMedia.length > 0 && (
@@ -357,11 +421,13 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
               {/* AI Understanding & Context Summary */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.85rem' }}>
                 <div className="stat-box">
-                  <div className="stat-label">Problem Category</div>
+                  <div className="stat-label">Problem Category & Intent</div>
                   <div style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-main)' }}>
                     {incident.understanding?.category || incident.category || 'General Maintenance'}
                   </div>
-                  <div className="stat-desc">Identified by Understanding Agent</div>
+                  <div className="stat-desc">
+                    {incident.understanding?.resolution_type === 'SPACE_REALLOCATION' ? 'Space & Classroom Reallocation' : 'Field Technician Dispatch'}
+                  </div>
                 </div>
 
                 <div className="stat-box">
@@ -378,7 +444,9 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
                 <div>
                   <div style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Current Execution State</div>
                   <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-main)', marginTop: '0.15rem' }}>
-                    {workOrder ? `Work Order #${workOrder.id} (${workOrder.status}) assigned to ${workOrder.technician || 'Specialist'}` : 'Agents coordinating dispatch'}
+                    {incident.category === 'SPACE_ALLOCATION' || incident.space_allocation_decision?.reallocated 
+                      ? `Resolved: Relocated to ${incident.space_allocation_decision?.allocated_room || 'vacant room'}`
+                      : (workOrder ? `Work Order #${workOrder.id} (${workOrder.status}) assigned to ${workOrder.technician || 'Specialist'}` : 'Agents coordinating dispatch')}
                   </div>
                 </div>
                 <button 

@@ -40,11 +40,21 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
   // Extract all work orders linked with their parent incident
   const allOrdersWithIncidents: { workOrder: WorkOrderItem; incident: Incident }[] = [];
   incidents.forEach(inc => {
+    // Space reallocations are handled autonomously by SpaceAllocationAgent and do not involve technicians
+    if (
+      inc.category === 'SPACE_ALLOCATION' ||
+      inc.understanding?.resolution_type === 'SPACE_REALLOCATION' ||
+      inc.space_allocation_decision?.reallocated ||
+      inc.understanding?.requires_technician === false
+    ) {
+      return;
+    }
+
     if (inc.work_orders && inc.work_orders.length > 0) {
       inc.work_orders.forEach(wo => {
-        allOrdersWithIncidents.push({ workOrder: wo, incident: inc });
+        if (wo && wo.id) allOrdersWithIncidents.push({ workOrder: wo, incident: inc });
       });
-    } else if (inc.work_order) {
+    } else if (inc.work_order && inc.work_order.id) {
       allOrdersWithIncidents.push({ workOrder: inc.work_order, incident: inc });
     }
   });
@@ -68,8 +78,7 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
         (woTechName && userCleanName && (
           woTechName.includes(userCleanName) ||
           userCleanName.includes(woTechName)
-        )) ||
-        currentUser.role === 'TECHNICIAN'
+        ))
       );
       if (!isAssigned) return false;
     }
